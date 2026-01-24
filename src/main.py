@@ -69,10 +69,30 @@ def format_education(education_list: list) -> str:
 def format_skills(skills_list: list) -> str:
     # \cvitem{Category}{Skill1, Skill2}
     # Or just a comma separated list
-    return f"\\cvitem{{Skills}}{{ {', '.join(skills_list)} }}"
+    formatted_skills = []
+    for skill in skills_list:
+        if isinstance(skill, str):
+            formatted_skills.append(skill)
+        elif isinstance(skill, dict):
+             # Try to find common keys
+            name = skill.get('skill') or skill.get('name') or list(skill.values())[0]
+            formatted_skills.append(str(name))
+    return f"\\cvitem{{Skills}}{{ {', '.join(formatted_skills)} }}"
 
 def format_languages(languages_list: list) -> str:
-    return f"\\cvitem{{Languages}}{{ {', '.join(languages_list)} }}"
+    formatted_languages = []
+    for lang in languages_list:
+        if isinstance(lang, str):
+            formatted_languages.append(lang)
+        elif isinstance(lang, dict):
+            # Try to find common keys for language name and proficiency
+            name = lang.get('language') or lang.get('name') or list(lang.values())[0]
+            proficiency = lang.get('proficiency') or lang.get('level')
+            if proficiency:
+                formatted_languages.append(f"{name} ({proficiency})")
+            else:
+                formatted_languages.append(str(name))
+    return f"\\cvitem{{Languages}}{{ {', '.join(formatted_languages)} }}"
 
 def main():
     load_dotenv()
@@ -119,12 +139,19 @@ def main():
     # Load Template and Fill
     cv_template = load_file("templates/cv_template.tex")
     cv_latex = fill_template(cv_template, cv_data)
-    save_file("cv.tex", cv_latex)
+    
+    # Ensure output directory exists
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    cv_filename = "cv.tex"
+    cv_path = os.path.join(output_dir, cv_filename)
+    save_file(cv_path, cv_latex)
 
     # 4. Render CV
     print("Rendering CV...")
-    if PDFRenderer.render_tex("cv.tex"):
-        print("CV rendered successfully: cv.pdf")
+    if PDFRenderer.render_tex(cv_path, output_dir=output_dir):
+        print(f"CV rendered successfully: {os.path.join(output_dir, 'cv.pdf')}")
     else:
         print("Failed to render CV.")
 
@@ -149,12 +176,14 @@ def main():
         cl_data['opening'] = "Dear Hiring Manager,"
 
     cl_latex = fill_template(cl_template, cl_data)
-    save_file("cover_letter.tex", cl_latex)
+    cl_filename = "cover_letter.tex"
+    cl_path = os.path.join(output_dir, cl_filename)
+    save_file(cl_path, cl_latex)
 
     # 6. Render Cover Letter
     print("Rendering Cover Letter...")
-    if PDFRenderer.render_tex("cover_letter.tex"):
-        print("Cover Letter rendered successfully: cover_letter.pdf")
+    if PDFRenderer.render_tex(cl_path, output_dir=output_dir):
+        print(f"Cover Letter rendered successfully: {os.path.join(output_dir, 'cover_letter.pdf')}")
     else:
         print("Failed to render Cover Letter.")
 
