@@ -20,7 +20,7 @@ An AI-powered tool that automates the creation of tailored CVs and Cover Letters
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/manuasdf/Agentic-Applications.git
    cd "Agentic Applications"
    ```
 
