@@ -5,6 +5,9 @@ You will be given the text of a job posting.
 Output a JSON object with the following fields:
 - "job_title": The title of the position.
 - "company": The name of the company.
+- "contact_name": The name of the contact person.
+- "contact_email": The email of the contact person.
+- "contact_phone": The phone number of the contact person.
 - "language": The primary language of the job posting ("en" or "de").
 - "key_skills": A list of the most important skills required.
 - "summary": A brief summary of the role.
