@@ -1,17 +1,21 @@
-\documentclass[11pt,a4paper,sans]{moderncv}
-\moderncvstyle{classic}
-\moderncvcolor{blue}
-\usepackage[scale=0.75]{geometry}
-\usepackage{babel}
-
-\name{<<name>>}{}
-\title{<<title>>}
-\address{<<address>>}{<<city>>}{<<country>>}
-\phone[mobile]{<<phone>>}
-\email{<<email>>}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel} % For English hyphenation and typography
+\usepackage[ngerman]{babel} % For German hyphenation and typography
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
 
 \begin{document}
-\makecvtitle
+
+% Personal Information
+\begin{center}
+    {\Large \textbf{<<name>>}} \\
+    <<city>>, <<country>> \\
+    <<phone>> \\
+    <<email>> \\
+    \href{<<linkedin_link>>}{<<linkedin_link>>}
+\end{center}
 
 <<cv_body>>
 
