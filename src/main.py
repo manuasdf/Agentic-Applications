@@ -131,10 +131,38 @@ def main():
     cv_data = JSONParser.parse(cv_content_str)
 
     # Pre-process lists into LaTeX strings
-    cv_data['experience_section'] = format_experience(cv_data.get('experience', []))
-    cv_data['education_section'] = format_education(cv_data.get('education', []))
-    cv_data['skills_section'] = format_skills(cv_data.get('skills', []))
-    cv_data['languages_section'] = format_languages(cv_data.get('languages', []))
+    # Pre-process lists into LaTeX strings
+    # We define a mapping from key to (Section Title, Formatting Function)
+    section_map = {
+        'experience': ('Experience', format_experience),
+        'education': ('Education', format_education),
+        'skills': ('Skills', format_skills),
+        'languages': ('Languages', format_languages),
+        # Summary is usually a string, but let's handle it if it appears in order.
+        'summary': ('Summary', lambda x: x if x else "") 
+    }
+
+    # Default order if none provided
+    default_order = ["summary", "experience", "skills", "education", "languages"]
+    section_order = cv_data.get('section_order', default_order)
+    
+    cv_body = ""
+    for section_key in section_order:
+        if section_key in section_map:
+            title, formatter = section_map[section_key]
+            content_data = cv_data.get(section_key)
+            if content_data:
+                formatted_content = formatter(content_data)
+                # Only add section if there is content
+                if formatted_content.strip():
+                     cv_body += f"\\section{{{title}}}\n{formatted_content}\n\n"
+        else:
+             # Fallback for unknown sections or if the AI invented a key
+             # If the key exists in data and is a string, add it as a section
+             if section_key in cv_data and isinstance(cv_data[section_key], str):
+                 cv_body += f"\\section{{{section_key.capitalize()}}}\n{cv_data[section_key]}\n\n"
+
+    cv_data['cv_body'] = cv_body
 
     # Load Template and Fill
     cv_template = load_file("templates/cv_template.tex")

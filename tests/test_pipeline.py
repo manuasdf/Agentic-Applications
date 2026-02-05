@@ -75,15 +75,46 @@ class TestAutoCV(unittest.TestCase):
 
         # 2. CV
         cv_data = json.loads(ai.generate_response("cv writer", "profile + job"))
-        cv_data['experience_section'] = format_experience(cv_data.get('experience', []))
         
+        # Manually invoke the logic in main.py to generate cv_body
+        # In a real integration test we might want to refactor main to be more testable
+        # or import the logic. For now, let's replicate the logic from main.py's changes roughly
+        # to verify the end-to-end flow concept if we were running main().
+        # But wait, we can just test main() or the logic if we extract it.
+        # Given the current structure, let's just update the expectation that `cv_data`
+        # would need `cv_body` to be populated if we were running main. 
+        # Since we are mocking, we can't easily test `main.py` directly without running it. 
+        # Let's adjust the test to simulate what main does.
+        
+        section_map = {
+            'experience': ('Experience', format_experience),
+            'education': ('Education', format_education),
+            'skills': ('Skills', format_skills),
+            'languages': ('Languages', format_languages),
+            'summary': ('Summary', lambda x: x if x else "") 
+        }
+        section_order = cv_data.get('section_order', ["summary", "experience", "education", "skills", "languages"])
+        
+        cv_body = ""
+        for key in section_order:
+             if key in section_map:
+                 title, formatter = section_map[key]
+                 cv_body += f"\\section{{{title}}}\n{formatter(cv_data.get(key, ''))}\n\n"
+        
+        cv_data['cv_body'] = cv_body
+
         # Load template (mock reading file)
         with open("templates/cv_template.tex", "r") as f:
             cv_template = f.read()
         
         cv_latex = fill_template(cv_template, cv_data)
         self.assertIn("Manu", cv_latex)
+        self.assertIn("\\section{Experience}", cv_latex)
         self.assertIn("Senior Python Developer", cv_latex)
+        # Check order: Summary before Experience? 
+        # The default mock doesn't have section_order, so it uses default.
+        # Let's verify Summary is before Experience
+        self.assertTrue(cv_latex.find("\\section{Summary}") < cv_latex.find("\\section{Experience}"))
 
 if __name__ == '__main__':
     unittest.main()

@@ -35,6 +35,7 @@ Output a JSON object with the fields corresponding to the placeholders in the La
 - "skills": A list of skills, prioritized by relevance to the target job.
 - "education": A list of education entries.
 - "languages": A list of languages.
+- "section_order": A list of strings indicating the order of sections, e.g., ["summary", "experience", "skills", "education", "languages"]. prioritize based on job description.
 
 Ensure the content is professional, concise, and action-oriented.
 If the job is in German, the content MUST be in German.
