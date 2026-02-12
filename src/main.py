@@ -100,6 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description="AutoCV Generator")
     parser.add_argument("url", help="URL of the job posting")
     parser.add_argument("--profile", default="data/candidate_profile.md", help="Path to candidate profile")
+    parser.add_argument("--message", help="Custom message to guide the agent")
     args = parser.parse_args()
 
     # 1. Setup
@@ -128,6 +129,8 @@ def main():
     # 3. Generate CV Content
     print("Generating CV content...")
     cv_prompt = f"Candidate Profile:\n{candidate_profile}\n\nJob Analysis:\n{json.dumps(job_analysis)}\n"
+    if args.message:
+        cv_prompt += f"\n\nUser Guidance:\n{args.message}\n"
     cv_content_str = ai.generate_response(SYSTEM_PROMPT_CV_GENERATOR, cv_prompt)
     cv_data = JSONParser.parse(cv_content_str)
 
@@ -204,6 +207,8 @@ def main():
     # 5. Generate Cover Letter Content
     print("Generating Cover Letter content...")
     cl_prompt = f"Candidate Profile:\n{candidate_profile}\n\nJob Analysis:\n{json.dumps(job_analysis)}\n\nCV Content:\n{json.dumps(cv_data)}"
+    if args.message:
+        cl_prompt += f"\n\nUser Guidance:\n{args.message}\n"
     cl_content_str = ai.generate_response(SYSTEM_PROMPT_COVER_LETTER_GENERATOR, cl_prompt)
     cl_data = JSONParser.parse(cl_content_str)
 
