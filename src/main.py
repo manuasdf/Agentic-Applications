@@ -193,12 +193,10 @@ def main():
     cl_template = load_file("templates/cover_letter_template.tex")
     # Add common fields from CV data if missing in CL data
     if 'name' not in cl_data: cl_data['name'] = cv_data.get('name')
-    if 'address' not in cl_data: cl_data['address'] = cv_data.get('address')
-    if 'city' not in cl_data: cl_data['city'] = cv_data.get('city')
-    if 'country' not in cl_data: cl_data['country'] = cv_data.get('country')
+    if 'sender_region' not in cl_data: cl_data['sender_region'] = cv_data.get('sender_region')
     if 'phone' not in cl_data: cl_data['phone'] = cv_data.get('phone')
     if 'email' not in cl_data: cl_data['email'] = cv_data.get('email')
-    
+
     # Opening fallback
     if 'opening' not in cl_data:
         cl_data['opening'] = "Dear Hiring Manager,"

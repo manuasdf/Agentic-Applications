@@ -54,6 +54,7 @@ Output a JSON object with:
 - "recipient_name": Name of the hiring manager (if found) or "Hiring Manager" / "Damen und Herren".
 - "company_name": Name of the company.
 - "company_address": Address of the company (if found) or a placeholder.
+- "sender_address": The sender's location (City, Country or Metropolitan Region). Do NOT include street address.
 - "letter_body": The body of the cover letter. It should be 3-4 paragraphs.
     - Introduction: State the position applied for and enthusiasm.
     - Body: Connect specific achievements to the job requirements.
