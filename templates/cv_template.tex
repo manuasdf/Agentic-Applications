@@ -1,31 +1,33 @@
-\documentclass[11pt,a4paper,sans]{moderncv}
-\moderncvstyle{classic}
-\moderncvcolor{blue}
-\usepackage[scale=0.75]{geometry}
-\usepackage{babel}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[<<latex_language>>]{babel} 
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
 
-\name{<<name>>}{}
-\title{<<title>>}
-\address{<<address>>}{<<city>>}{<<country>>}
-\phone[mobile]{<<phone>>}
-\email{<<email>>}
+\geometry{
+  left=2cm,
+  right=2cm,
+  top=2cm,
+  bottom=5cm
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
 
 \begin{document}
-\makecvtitle
 
-\section{Summary}
-<<summary>>
+% Personal Information
+\begin{center}
+    {\Large \textbf{<<name>>}} \\
+    <<sender_region>> \\
+    <<phone>> - <<email>> -
+    \href{<<linkedin_link>>}{<<linkedin_link>>}
+\end{center}
 
-\section{Experience}
-<<experience_section>>
-
-\section{Education}
-<<education_section>>
-
-\section{Skills}
-<<skills_section>>
-
-\section{Languages}
-<<languages_section>>
+<<cv_body>>
 
 \end{document}

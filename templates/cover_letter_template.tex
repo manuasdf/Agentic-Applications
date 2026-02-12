@@ -1,23 +1,63 @@
-\documentclass[11pt,a4paper,sans]{moderncv}
-\moderncvstyle{classic}
-\moderncvcolor{blue}
-\usepackage[scale=0.75]{geometry}
-\usepackage{babel}
+\documentclass[11pt,a4paper]{article}
+\usepackage[<<latex_language>>]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage[none]{hyphenat}
 
-\name{<<name>>}{}
-\address{<<address>>}{<<city>>}{<<country>>}
-\phone[mobile]{<<phone>>}
-\email{<<email>>}
+\geometry{
+  left=2.5cm,
+  right=2.5cm,
+  top=2.5cm,
+  bottom=2.5cm
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
 
 \begin{document}
+\emergencystretch 3em
 
-\recipient{<<recipient_name>>}{<<company_name>>\\\\<<company_address>>}
-\date{\\today}
-\opening{<<opening>>}
-\makelettertitle
+
+\begin{flushright}
+<<name>>\\
+<<sender_region>>\\
+<<email>>\\
+\href{<<linkedin_url>>}{<<linkedin_url>>}
+\end{flushright}
+
+<<company_name>>\\
+<<company_address>>
+
+\begin{flushright}
+<<sender_city>>, \today
+\end{flushright}
+
+\vspace{1em}
+
+\textbf{<<subject>>}
+
+\vspace{1em}
+<<opening>>
+
+\vspace{1em}
 
 <<letter_body>>
 
-\makeletterclosing
+\vspace{1em}
+
+<<closing>>
+
+\vspace{1em}
+
+<<name>>
 
 \end{document}

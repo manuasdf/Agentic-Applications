@@ -123,6 +123,7 @@ def main():
     job_analysis = JSONParser.parse(job_analysis_str)
     print(f"Job Title: {job_analysis.get('job_title')}")
     print(f"Company: {job_analysis.get('company')}")
+    print(f"Language: {job_analysis.get('language')}")
 
     # 3. Generate CV Content
     print("Generating CV content...")
@@ -131,10 +132,55 @@ def main():
     cv_data = JSONParser.parse(cv_content_str)
 
     # Pre-process lists into LaTeX strings
-    cv_data['experience_section'] = format_experience(cv_data.get('experience', []))
-    cv_data['education_section'] = format_education(cv_data.get('education', []))
-    cv_data['skills_section'] = format_skills(cv_data.get('skills', []))
-    cv_data['languages_section'] = format_languages(cv_data.get('languages', []))
+    # Pre-process lists into LaTeX strings
+    # We define a mapping from key to (Section Title, Formatting Function)
+    section_map = {
+        'experience': ('Experience', format_experience),
+        'education': ('Education', format_education),
+        'skills': ('Skills', format_skills),
+        'languages': ('Languages', format_languages),
+        # Summary is usually a string, but let's handle it if it appears in order.
+        'summary': ('Summary', lambda x: x if x else "") 
+    }
+
+    def get_babel_language(lang_code: str) -> str:
+        """Maps job language code/name to Babel package option."""
+        if not lang_code:
+            return "english"
+        
+        lang_lower = lang_code.lower()
+        if "de" in lang_lower or "german" in lang_lower or "deutsch" in lang_lower:
+            return "ngerman"
+        elif "en" in lang_lower or "english" in lang_lower:
+            return "english"
+        # Default to english if unknown
+        return "english"
+
+    # Set latex language based on job analysis
+    babel_lang = get_babel_language(job_analysis.get('language'))
+    cv_data['latex_language'] = babel_lang
+
+    # Default order if none provided
+    default_order = ["summary", "experience", "skills", "education", "languages"]
+    section_order = cv_data.get('section_order', default_order)
+    
+    cv_body = ""
+    for section_key in section_order:
+        if section_key in section_map:
+            title, formatter = section_map[section_key]
+            content_data = cv_data.get(section_key)
+            if content_data:
+                formatted_content = formatter(content_data)
+                # Only add section if there is content
+                if formatted_content.strip():
+                     cv_body += f"\\section{{{title}}}\n{formatted_content}\n\n"
+        else:
+             # Fallback for unknown sections or if the AI invented a key
+             # If the key exists in data and is a string, add it as a section
+             if section_key in cv_data and isinstance(cv_data[section_key], str):
+                 cv_body += f"\\section{{{section_key.capitalize()}}}\n{cv_data[section_key]}\n\n"
+
+    cv_data['cv_body'] = cv_body
 
     # Load Template and Fill
     cv_template = load_file("templates/cv_template.tex")
@@ -165,12 +211,12 @@ def main():
     cl_template = load_file("templates/cover_letter_template.tex")
     # Add common fields from CV data if missing in CL data
     if 'name' not in cl_data: cl_data['name'] = cv_data.get('name')
-    if 'address' not in cl_data: cl_data['address'] = cv_data.get('address')
-    if 'city' not in cl_data: cl_data['city'] = cv_data.get('city')
-    if 'country' not in cl_data: cl_data['country'] = cv_data.get('country')
+    if 'sender_region' not in cl_data: cl_data['sender_region'] = cv_data.get('sender_region')
     if 'phone' not in cl_data: cl_data['phone'] = cv_data.get('phone')
     if 'email' not in cl_data: cl_data['email'] = cv_data.get('email')
-    
+    if 'linkedin_link' not in cl_data: cl_data['linkedin_link'] = cv_data.get('linkedin_link')
+    if 'latex_language' not in cl_data: cl_data['latex_language'] = babel_lang
+
     # Opening fallback
     if 'opening' not in cl_data:
         cl_data['opening'] = "Dear Hiring Manager,"

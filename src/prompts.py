@@ -5,6 +5,9 @@ You will be given the text of a job posting.
 Output a JSON object with the following fields:
 - "job_title": The title of the position.
 - "company": The name of the company.
+- "contact_name": The name of the contact person.
+- "contact_email": The email of the contact person.
+- "contact_phone": The phone number of the contact person.
 - "language": The primary language of the job posting ("en" or "de").
 - "key_skills": A list of the most important skills required.
 - "summary": A brief summary of the role.
@@ -32,6 +35,7 @@ Output a JSON object with the fields corresponding to the placeholders in the La
 - "skills": A list of skills, prioritized by relevance to the target job.
 - "education": A list of education entries.
 - "languages": A list of languages.
+- "section_order": A list of strings indicating the order of sections, e.g., ["summary", "experience", "skills", "education", "languages"]. prioritize based on job description.
 
 Ensure the content is professional, concise, and action-oriented.
 If the job is in German, the content MUST be in German.
@@ -50,6 +54,7 @@ Output a JSON object with:
 - "recipient_name": Name of the hiring manager (if found) or "Hiring Manager" / "Damen und Herren".
 - "company_name": Name of the company.
 - "company_address": Address of the company (if found) or a placeholder.
+- "sender_address": The sender's location (City, Country or Metropolitan Region). Do NOT include street address.
 - "letter_body": The body of the cover letter. It should be 3-4 paragraphs.
     - Introduction: State the position applied for and enthusiasm.
     - Body: Connect specific achievements to the job requirements.
