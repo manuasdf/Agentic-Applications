@@ -123,6 +123,7 @@ def main():
     job_analysis = JSONParser.parse(job_analysis_str)
     print(f"Job Title: {job_analysis.get('job_title')}")
     print(f"Company: {job_analysis.get('company')}")
+    print(f"Language: {job_analysis.get('language')}")
 
     # 3. Generate CV Content
     print("Generating CV content...")
@@ -141,6 +142,23 @@ def main():
         # Summary is usually a string, but let's handle it if it appears in order.
         'summary': ('Summary', lambda x: x if x else "") 
     }
+
+    def get_babel_language(lang_code: str) -> str:
+        """Maps job language code/name to Babel package option."""
+        if not lang_code:
+            return "english"
+        
+        lang_lower = lang_code.lower()
+        if "de" in lang_lower or "german" in lang_lower or "deutsch" in lang_lower:
+            return "ngerman"
+        elif "en" in lang_lower or "english" in lang_lower:
+            return "english"
+        # Default to english if unknown
+        return "english"
+
+    # Set latex language based on job analysis
+    babel_lang = get_babel_language(job_analysis.get('language'))
+    cv_data['latex_language'] = babel_lang
 
     # Default order if none provided
     default_order = ["summary", "experience", "skills", "education", "languages"]
@@ -196,6 +214,8 @@ def main():
     if 'sender_region' not in cl_data: cl_data['sender_region'] = cv_data.get('sender_region')
     if 'phone' not in cl_data: cl_data['phone'] = cv_data.get('phone')
     if 'email' not in cl_data: cl_data['email'] = cv_data.get('email')
+    if 'linkedin_link' not in cl_data: cl_data['linkedin_link'] = cv_data.get('linkedin_link')
+    if 'latex_language' not in cl_data: cl_data['latex_language'] = babel_lang
 
     # Opening fallback
     if 'opening' not in cl_data:

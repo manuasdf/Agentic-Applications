@@ -1,19 +1,30 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
-\usepackage[english]{babel} % For English hyphenation and typography
-\usepackage[ngerman]{babel} % For German hyphenation and typography
-\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage[<<latex_language>>]{babel} 
+\usepackage{geometry}
 \usepackage{enumitem}
 \usepackage{hyperref}
+
+\geometry{
+  left=2cm,
+  right=2cm,
+  top=2cm,
+  bottom=5cm
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
 
 \begin{document}
 
 % Personal Information
 \begin{center}
     {\Large \textbf{<<name>>}} \\
-    <<city>>, <<country>> \\
-    <<phone>> \\
-    <<email>> \\
+    <<sender_region>> \\
+    <<phone>> - <<email>> -
     \href{<<linkedin_link>>}{<<linkedin_link>>}
 \end{center}
 
