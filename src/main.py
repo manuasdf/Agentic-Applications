@@ -8,7 +8,7 @@ from typing import Dict, Any
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from src.ai_interface import MistralProvider
+from src.ai_interface import ProviderFactory
 from src.tools import WebScraper, PDFRenderer, JSONParser
 from src.prompts import (
     SYSTEM_PROMPT_JOB_ANALYZER,
@@ -101,13 +101,23 @@ def main():
     parser.add_argument("url", help="URL of the job posting")
     parser.add_argument("--profile", default="data/candidate_profile.md", help="Path to candidate profile")
     parser.add_argument("--message", help="Custom message to guide the agent")
+    parser.add_argument("--provider", default="mistral", choices=["mistral", "openai", "anthropic", "xai", "deepseek", "huggingface", "local"], help="AI Provider to use")
+    parser.add_argument("--model", help="Specific model name to use")
+    parser.add_argument("--api-key", help="API Key for the provider (overrides env var)")
+    parser.add_argument("--api-base", help="Base URL for the provider (useful for local/compatible providers)")
+    
     args = parser.parse_args()
 
     # 1. Setup
     try:
-        ai = MistralProvider()
-    except ValueError as e:
-        print(f"Error: {e}")
+        ai = ProviderFactory.get_provider(
+            args.provider, 
+            api_key=args.api_key,
+            api_base=args.api_base,
+            model_name=args.model
+        )
+    except (ValueError, ImportError) as e:
+        print(f"Error initializing provider: {e}")
         return
 
     print(f"Fetching job from: {args.url}")
