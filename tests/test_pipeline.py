@@ -24,7 +24,6 @@ class MockAIProvider(AIProvider):
             })
         elif "cv writer" in system_prompt.lower():
             return json.dumps({
-                "name": "Manu",
                 "title": "Senior Python Developer",
                 "summary": "Experienced developer...",
                 "experience": [

@@ -1,10 +1,5 @@
 # Candidate Profile
 
-**Name:** Manu
-**Email:** manu@example.com
-**Phone:** +123456789
-**Address:** 123 Tech Street, Berlin, Germany
-
 ## Summary
 Experienced Software Engineer with a focus on AI and automation.
 
