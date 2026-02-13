@@ -145,7 +145,6 @@ def main():
     cv_data = JSONParser.parse(cv_content_str)
 
     # Pre-process lists into LaTeX strings
-    # Pre-process lists into LaTeX strings
     # We define a mapping from key to (Section Title, Formatting Function)
     section_map = {
         'experience': ('Experience', format_experience),
@@ -225,11 +224,6 @@ def main():
     # Load Template and Fill
     cl_template = load_file("templates/cover_letter_template.tex")
     # Add common fields from CV data if missing in CL data
-    if 'name' not in cl_data: cl_data['name'] = cv_data.get('name')
-    if 'sender_region' not in cl_data: cl_data['sender_region'] = cv_data.get('sender_region')
-    if 'phone' not in cl_data: cl_data['phone'] = cv_data.get('phone')
-    if 'email' not in cl_data: cl_data['email'] = cv_data.get('email')
-    if 'linkedin_link' not in cl_data: cl_data['linkedin_link'] = cv_data.get('linkedin_link')
     if 'latex_language' not in cl_data: cl_data['latex_language'] = babel_lang
 
     # Opening fallback
