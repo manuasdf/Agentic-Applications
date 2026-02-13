@@ -3,3 +3,6 @@ requests
 beautifulsoup4
 pydantic
 python-dotenv
+openai
+anthropic
+huggingface_hub
