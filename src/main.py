@@ -25,6 +25,36 @@ def save_file(path: str, content: str):
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content)
 
+def load_config(config_path: str = None) -> dict:
+    """Load configuration from JSON file."""
+    default_config = {
+        "generate_cv": True,
+        "generate_cover_letter": True,
+        "generate_email": True,
+        "output_dir": "output",
+        "profile_path": "data/candidate_profile.md",
+        "templates": {
+            "cv": "templates/cv_template.tex",
+            "cover_letter": "templates/cover_letter_template.tex"
+        }
+    }
+    
+    if not config_path or not os.path.exists(config_path):
+        return default_config
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            user_config = json.load(f)
+        
+        # Merge user config with defaults (user config takes precedence)
+        merged_config = default_config.copy()
+        merged_config.update(user_config)
+        return merged_config
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Warning: Could not load config file: {e}")
+        return default_config
+
+
 def extract_clean_latex(ai_response: str) -> str:
     """
     Extracts clean LaTeX code from AI response.
@@ -154,14 +184,34 @@ def main():
     
     parser = argparse.ArgumentParser(description="AutoCV Generator")
     parser.add_argument("url", help="URL of the job posting")
-    parser.add_argument("--profile", default="data/candidate_profile.md", help="Path to candidate profile")
+    parser.add_argument("--profile", help="Path to candidate profile (overrides config)")
     parser.add_argument("--message", help="Custom message to guide the agent")
     parser.add_argument("--provider", default="mistral", choices=["mistral", "openai", "anthropic", "xai", "deepseek", "huggingface", "local"], help="AI Provider to use")
     parser.add_argument("--model", help="Specific model name to use")
     parser.add_argument("--api-key", help="API Key for the provider (overrides env var)")
     parser.add_argument("--api-base", help="Base URL for the provider (useful for local/compatible providers)")
+    parser.add_argument("--config", help="Path to JSON config file")
+    parser.add_argument("--no-cv", action="store_true", help="Skip CV generation")
+    parser.add_argument("--no-cover-letter", action="store_true", help="Skip cover letter generation")
+    parser.add_argument("--no-email", action="store_true", help="Skip email generation")
+    parser.add_argument("--output-dir", help="Output directory for generated files (overrides config)")
     
     args = parser.parse_args()
+    
+    # Load configuration
+    config = load_config(args.config)
+    
+    # Override config with command line arguments
+    if args.profile:
+        config["profile_path"] = args.profile
+    if args.output_dir:
+        config["output_dir"] = args.output_dir
+    if args.no_cv:
+        config["generate_cv"] = False
+    if args.no_cover_letter:
+        config["generate_cover_letter"] = False
+    if args.no_email:
+        config["generate_email"] = False
 
     # 1. Setup
     try:
@@ -181,7 +231,7 @@ def main():
         print("Failed to fetch job content.")
         return
 
-    candidate_profile = load_file(args.profile)
+    candidate_profile = load_file(config["profile_path"])
 
     # 2. Analyze Job
     print("Analyzing job...")
@@ -191,11 +241,12 @@ def main():
     print(f"Company: {job_analysis.get('company')}")
     print(f"Language: {job_analysis.get('language')}")
 
-    # 3. Generate CV Content
-    print("Generating CV content...")
-    
-    # Load the LaTeX template
-    cv_template = load_file("templates/cv_template.tex")
+    # 3. Generate CV Content (conditional)
+    if config["generate_cv"]:
+        print("Generating CV content...")
+        
+        # Load the LaTeX template
+        cv_template = load_file(config["templates"]["cv"])
     
     # Set latex language based on job analysis
     def get_babel_language(lang_code: str) -> str:
@@ -235,7 +286,7 @@ def main():
     cv_latex = ensure_latex_encoding(cv_latex)
     
     # Ensure output directory exists
-    output_dir = "output"
+    output_dir = config["output_dir"]
     os.makedirs(output_dir, exist_ok=True)
     
     cv_filename = "cv.tex"
@@ -249,11 +300,12 @@ def main():
     else:
         print("Failed to render CV.")
 
-    # 5. Generate Cover Letter Content
-    print("Generating Cover Letter content...")
-    
-    # Load the LaTeX template
-    cl_template = load_file("templates/cover_letter_template.tex")
+    # 5. Generate Cover Letter Content (conditional)
+    if config["generate_cover_letter"]:
+        print("Generating Cover Letter content...")
+        
+        # Load the LaTeX template
+        cl_template = load_file(config["templates"]["cover_letter"])
     
     # Create prompt with template, candidate profile, job analysis, and CV LaTeX
     cl_prompt = f"LaTeX Template:\n{cl_template}\n\n"
@@ -286,11 +338,12 @@ def main():
     if PDFRenderer.render_tex(cl_path, output_dir=output_dir):
         print(f"Cover Letter rendered successfully: {os.path.join(output_dir, 'cover_letter.pdf')}")
     else:
-        print("Failed to render Cover Letter.")
+            print("Failed to render Cover Letter.")
 
-    # 7. Generate Email
-    print("Drafting Email...")
-    # Extract letter body from cover letter LaTeX for email generation
+    # 7. Generate Email (conditional)
+    if config["generate_email"]:
+        print("Drafting Email...")
+        # Extract letter body from cover letter LaTeX for email generation
     # This is a simple extraction - in production you might want more sophisticated parsing
     letter_body_start = cl_latex.find("\\begin{document}")
     letter_body_end = cl_latex.find("\\end{document}")

@@ -1,0 +1,11 @@
+{
+    "generate_cv": true,
+    "generate_cover_letter": true,
+    "generate_email": false,
+    "output_dir": "output",
+    "profile_path": "data/candidate_profile.md",
+    "templates": {
+        "cv": "templates/cv_template.tex",
+        "cover_letter": "templates/cover_letter_template.tex"
+    }
+}
