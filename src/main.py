@@ -22,8 +22,16 @@ def load_file(path: str) -> str:
         return f.read()
 
 def save_file(path: str, content: str):
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
+    """Save content to file with UTF-8 encoding, handling encoding issues."""
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+    except UnicodeEncodeError:
+        # If UTF-8 encoding fails, try to fix the content
+        print(f"Warning: Encoding issue detected in {path}, attempting to fix...")
+        fixed_content = content.encode('utf-8', errors='replace').decode('utf-8')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(fixed_content)
 
 def load_config(config_path: str = None) -> dict:
     """Load configuration from JSON file."""
@@ -57,11 +65,24 @@ def load_config(config_path: str = None) -> dict:
         return default_config
 
 
+def clean_utf8_content(content: str) -> str:
+    """Ensure content is valid UTF-8 by replacing invalid characters."""
+    try:
+        # Try to encode to UTF-8 to check for invalid characters
+        content.encode('utf-8')
+        return content
+    except UnicodeEncodeError:
+        # Replace invalid UTF-8 sequences with replacement character
+        return content.encode('utf-8', errors='replace').decode('utf-8')
+
+
 def extract_clean_latex(ai_response: str) -> str:
     """
     Extracts clean LaTeX code from AI response.
     Handles cases where AI might include explanations or markdown formatting.
     """
+    # First clean up any UTF-8 issues
+    ai_response = clean_utf8_content(ai_response)
     # If response already looks like clean LaTeX, return as-is
     if ai_response.strip().startswith('\\documentclass') and ai_response.strip().endswith('\\end{document}'):
         return ai_response.strip()
@@ -90,6 +111,9 @@ def ensure_latex_encoding(latex_content: str) -> str:
     Ensures LaTeX document has proper UTF-8 encoding and font support.
     Adds necessary packages if missing.
     """
+    # First ensure the content is valid UTF-8
+    latex_content = clean_utf8_content(latex_content)
+    
     # Check if UTF-8 inputenc is already present
     if r'\usepackage[utf8]{inputenc}' not in latex_content and r'\usepackage[utf8x]{inputenc}' not in latex_content:
         # Find the document class line and insert inputenc after it
@@ -109,6 +133,14 @@ def ensure_latex_encoding(latex_content: str) -> str:
                 lines.insert(i+1, r'\usepackage[T1]{fontenc}')
                 latex_content = '\n'.join(lines)
                 break
+        else:
+            # If we didn't find utf8 package, add fontenc after documentclass
+            lines = latex_content.split('\n')
+            for i, line in enumerate(lines):
+                if line.strip().startswith('\\documentclass'):
+                    lines.insert(i+1, r'\usepackage[T1]{fontenc}')
+                    latex_content = '\n'.join(lines)
+                    break
     
     return latex_content
 
