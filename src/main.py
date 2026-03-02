@@ -40,6 +40,8 @@ def load_config(config_path: str = None) -> dict:
     }
     
     if not config_path or not os.path.exists(config_path):
+        if config_path == "config.json":
+            print(f"Info: No config.json found, using default configuration")
         return default_config
     
     try:
@@ -198,8 +200,9 @@ def main():
     
     args = parser.parse_args()
     
-    # Load configuration
-    config = load_config(args.config)
+    # Load configuration - use 'config.json' as default if no --config specified
+    config_path = args.config if args.config else "config.json"
+    config = load_config(config_path)
     
     # Override config with command line arguments
     if args.profile:
