@@ -23,24 +23,120 @@ class MockAIProvider(AIProvider):
                 "fit_assessment": "Good fit."
             })
         elif "cv writer" in system_prompt.lower():
-            return json.dumps({
-                "title": "Senior Python Developer",
-                "summary": "Experienced developer...",
-                "experience": [
-                    {"role": "Dev", "company": "A", "dates": "2020-2022", "details": ["Did X", "Did Y"]}
-                ],
-                "education": ["BSc CS"],
-                "skills": ["Python", "Go"],
-                "languages": ["English", "German"]
-            })
+            # New approach: return complete LaTeX document
+            return '''\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[english]{babel} 
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{hyperref}
+
+\\geometry{
+  left=2cm,
+  right=2cm,
+  top=2cm,
+  bottom=5cm
+}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\\begin{document}
+
+% Personal Information
+\\begin{center}
+    {\\Large \\textbf{Manu}} \\\
+    \\textbf{Senior Python Developer} \\\
+    Berlin, Germany \\\
+    +123456789 - test@example.com -
+    \\href{https://linkedin.com/in/test}{test}
+\\end{center}
+
+\\section{Experience}
+\\cventry{2020-2022}{Dev}{A}{}{}{{
+\\begin{itemize}
+\\item Did X
+\\item Did Y
+\\end{itemize}
+}
+
+\\section{Education}
+\\cvitem{{}}{{ BSc CS }}
+
+\\section{Skills}
+\\cvitem{Skills}{ Python, Go }
+
+\\section{Languages}
+\\cvitem{Languages}{ English, German }
+
+\\end{document}'''
         elif "cover letter" in system_prompt.lower():
-            return json.dumps({
-                "recipient_name": "Hiring Manager",
-                "company_name": "Tech Solutions GmbH",
-                "company_address": "Berlin",
-                "letter_body": "I am writing to apply...",
-                "opening": "Dear Hiring Manager,"
-            })
+            # New approach: return complete LaTeX document
+            return '''\\documentclass[11pt,a4paper]{article}
+\\usepackage[english]{babel}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage{geometry}
+\\usepackage{setspace}
+\\usepackage{hyperref}
+\\usepackage[none]{hyphenat}
+
+\\geometry{
+  left=2.5cm,
+  right=2.5cm,
+  top=2.5cm,
+  bottom=2.5cm
+}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\\setlength{\\parindent}{0pt}
+\\setlength{\\parskip}{1em}
+
+\\begin{document}
+\\emergencystretch 3em
+
+
+\\begin{flushright}
+Manu\\\
+Berlin, Germany\\\
+test@example.com\\\
+\\href{https://linkedin.com/in/test}{test}
+\\end{flushright}
+
+Tech Solutions GmbH\\\
+Berlin
+
+\\begin{flushright}
+Berlin, \\today
+\\end{flushright}
+
+\\vspace{1em}
+
+\\textbf{Application for Senior Python Developer Position}
+
+\\vspace{1em}
+
+Dear Hiring Manager,
+
+\\vspace{1em}
+
+I am writing to apply for the Senior Python Developer position at Tech Solutions GmbH. I am writing to apply...
+
+\\vspace{1em}
+
+Sincerely,
+
+Manu
+
+\\end{document}'''
         elif "email" in system_prompt.lower():
             return json.dumps({
                 "subject": "Application for Senior Python Developer",
@@ -65,55 +161,40 @@ class TestAutoCV(unittest.TestCase):
         self.assertTrue(PDFRenderer.render_tex("dummy.tex"))
 
     def test_full_flow_logic(self):
-        # This tests the logic flow using the MockAIProvider
+        # This tests the logic flow using the MockAIProvider with the new template-aware approach
         ai = MockAIProvider()
         
         # 1. Analyze
         job_analysis = json.loads(ai.generate_response("job analyst", "job text"))
         self.assertEqual(job_analysis['job_title'], "Senior Python Developer")
 
-        # 2. CV
-        cv_data = json.loads(ai.generate_response("cv writer", "profile + job"))
-        
-        # Manually invoke the logic in main.py to generate cv_body
-        # In a real integration test we might want to refactor main to be more testable
-        # or import the logic. For now, let's replicate the logic from main.py's changes roughly
-        # to verify the end-to-end flow concept if we were running main().
-        # But wait, we can just test main() or the logic if we extract it.
-        # Given the current structure, let's just update the expectation that `cv_data`
-        # would need `cv_body` to be populated if we were running main. 
-        # Since we are mocking, we can't easily test `main.py` directly without running it. 
-        # Let's adjust the test to simulate what main does.
-        
-        section_map = {
-            'experience': ('Experience', format_experience),
-            'education': ('Education', format_education),
-            'skills': ('Skills', format_skills),
-            'languages': ('Languages', format_languages),
-            'summary': ('Summary', lambda x: x if x else "") 
-        }
-        section_order = cv_data.get('section_order', ["summary", "experience", "education", "skills", "languages"])
-        
-        cv_body = ""
-        for key in section_order:
-             if key in section_map:
-                 title, formatter = section_map[key]
-                 cv_body += f"\\section{{{title}}}\n{formatter(cv_data.get(key, ''))}\n\n"
-        
-        cv_data['cv_body'] = cv_body
-
-        # Load template (mock reading file)
+        # 2. CV - New approach: AI receives template and generates complete LaTeX
+        # Load template
         with open("templates/cv_template.tex", "r") as f:
             cv_template = f.read()
         
-        cv_latex = fill_template(cv_template, cv_data)
-        self.assertIn("Manu", cv_latex)
-        self.assertIn("\\section{Experience}", cv_latex)
+        # Create prompt with template (simulating the new workflow)
+        cv_prompt = f"LaTeX Template:\n{cv_template}\n\nCandidate Profile:\nprofile content\n\nJob Analysis:\n{json.dumps(job_analysis)}\nBabel Language: english\n"
+        
+        # AI should generate complete LaTeX (mock response)
+        cv_latex = ai.generate_response("cv writer", cv_prompt)
+        
+        # Verify the AI generated LaTeX contains expected elements
+        self.assertIn("\\documentclass", cv_latex)
         self.assertIn("Senior Python Developer", cv_latex)
-        # Check order: Summary before Experience? 
-        # The default mock doesn't have section_order, so it uses default.
-        # Let's verify Summary is before Experience
-        self.assertTrue(cv_latex.find("\\section{Summary}") < cv_latex.find("\\section{Experience}"))
+        self.assertIn("\\section{Experience}", cv_latex)
+        
+        # 3. Cover Letter - New approach
+        with open("templates/cover_letter_template.tex", "r") as f:
+            cl_template = f.read()
+        
+        cl_prompt = f"LaTeX Template:\n{cl_template}\n\nCandidate Profile:\nprofile content\n\nJob Analysis:\n{json.dumps(job_analysis)}\nCV LaTeX Content:\n{cv_latex}\nBabel Language: english\n"
+        
+        cl_latex = ai.generate_response("cover letter", cl_prompt)
+        
+        # Verify cover letter LaTeX
+        self.assertIn("\\documentclass", cl_latex)
+        self.assertIn("Tech Solutions GmbH", cl_latex)
 
 if __name__ == '__main__':
     unittest.main()

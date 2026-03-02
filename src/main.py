@@ -25,6 +25,61 @@ def save_file(path: str, content: str):
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content)
 
+def extract_clean_latex(ai_response: str) -> str:
+    """
+    Extracts clean LaTeX code from AI response.
+    Handles cases where AI might include explanations or markdown formatting.
+    """
+    # If response already looks like clean LaTeX, return as-is
+    if ai_response.strip().startswith('\\documentclass') and ai_response.strip().endswith('\\end{document}'):
+        return ai_response.strip()
+    
+    # Try to extract LaTeX from code blocks (```latex ... ```)
+    import re
+    latex_match = re.search(r'```latex\s*(.*?)\s*```', ai_response, re.DOTALL)
+    if latex_match:
+        return latex_match.group(1).strip()
+    
+    # Try to extract LaTeX from generic code blocks (``` ... ```)
+    code_match = re.search(r'```\s*(.*?)\s*```', ai_response, re.DOTALL)
+    if code_match:
+        return code_match.group(1).strip()
+    
+    # If no code blocks found, try to find LaTeX document structure
+    doc_match = re.search(r'\\documentclass.*?\\end{document}', ai_response, re.DOTALL)
+    if doc_match:
+        return doc_match.group(0).strip()
+    
+    # Fallback: return the original response (might fail compilation)
+    return ai_response.strip()
+
+def ensure_latex_encoding(latex_content: str) -> str:
+    """
+    Ensures LaTeX document has proper UTF-8 encoding and font support.
+    Adds necessary packages if missing.
+    """
+    # Check if UTF-8 inputenc is already present
+    if r'\usepackage[utf8]{inputenc}' not in latex_content and r'\usepackage[utf8x]{inputenc}' not in latex_content:
+        # Find the document class line and insert inputenc after it
+        lines = latex_content.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip().startswith('\\documentclass'):
+                # Insert inputenc after documentclass
+                lines.insert(i+1, r'\usepackage[utf8]{inputenc}')
+                latex_content = '\n'.join(lines)
+                break
+    
+    # Ensure T1 font encoding for better character support
+    if r'\usepackage[T1]{fontenc}' not in latex_content:
+        lines = latex_content.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip().startswith('\\usepackage[utf8]') or line.strip().startswith('\\usepackage[utf8x]'):
+                lines.insert(i+1, r'\usepackage[T1]{fontenc}')
+                latex_content = '\n'.join(lines)
+                break
+    
+    return latex_content
+
 def fill_template(template: str, data: Dict[str, Any]) -> str:
     """Replaces <<key>> in template with value from data."""
     for key, value in data.items():
@@ -138,23 +193,11 @@ def main():
 
     # 3. Generate CV Content
     print("Generating CV content...")
-    cv_prompt = f"Candidate Profile:\n{candidate_profile}\n\nJob Analysis:\n{json.dumps(job_analysis)}\n"
-    if args.message:
-        cv_prompt += f"\n\nUser Guidance:\n{args.message}\n"
-    cv_content_str = ai.generate_response(SYSTEM_PROMPT_CV_GENERATOR, cv_prompt)
-    cv_data = JSONParser.parse(cv_content_str)
-
-    # Pre-process lists into LaTeX strings
-    # We define a mapping from key to (Section Title, Formatting Function)
-    section_map = {
-        'experience': ('Experience', format_experience),
-        'education': ('Education', format_education),
-        'skills': ('Skills', format_skills),
-        'languages': ('Languages', format_languages),
-        # Summary is usually a string, but let's handle it if it appears in order.
-        'summary': ('Summary', lambda x: x if x else "") 
-    }
-
+    
+    # Load the LaTeX template
+    cv_template = load_file("templates/cv_template.tex")
+    
+    # Set latex language based on job analysis
     def get_babel_language(lang_code: str) -> str:
         """Maps job language code/name to Babel package option."""
         if not lang_code:
@@ -168,35 +211,28 @@ def main():
         # Default to english if unknown
         return "english"
 
-    # Set latex language based on job analysis
     babel_lang = get_babel_language(job_analysis.get('language'))
-    cv_data['latex_language'] = babel_lang
-
-    # Default order if none provided
-    default_order = ["summary", "experience", "skills", "education", "languages"]
-    section_order = cv_data.get('section_order', default_order)
     
-    cv_body = ""
-    for section_key in section_order:
-        if section_key in section_map:
-            title, formatter = section_map[section_key]
-            content_data = cv_data.get(section_key)
-            if content_data:
-                formatted_content = formatter(content_data)
-                # Only add section if there is content
-                if formatted_content.strip():
-                     cv_body += f"\\section{{{title}}}\n{formatted_content}\n\n"
-        else:
-             # Fallback for unknown sections or if the AI invented a key
-             # If the key exists in data and is a string, add it as a section
-             if section_key in cv_data and isinstance(cv_data[section_key], str):
-                 cv_body += f"\\section{{{section_key.capitalize()}}}\n{cv_data[section_key]}\n\n"
-
-    cv_data['cv_body'] = cv_body
-
-    # Load Template and Fill
-    cv_template = load_file("templates/cv_template.tex")
-    cv_latex = fill_template(cv_template, cv_data)
+    # Create prompt with template, candidate profile, and job analysis
+    cv_prompt = f"LaTeX Template:\n{cv_template}\n\n"
+    cv_prompt += f"Candidate Profile:\n{candidate_profile}\n\n"
+    cv_prompt += f"Job Analysis:\n{json.dumps(job_analysis)}\n"
+    cv_prompt += f"Babel Language: {babel_lang}\n"
+    if args.message:
+        cv_prompt += f"\nUser Guidance:\n{args.message}\n"
+    
+    # AI generates complete LaTeX document
+    cv_latex_raw = ai.generate_response(SYSTEM_PROMPT_CV_GENERATOR, cv_prompt)
+    cv_latex = extract_clean_latex(cv_latex_raw)
+    
+    # Provide user feedback about AI generation
+    if cv_latex_raw != cv_latex:
+        print("AI generated response with additional text. Extracted clean LaTeX for compilation.")
+    else:
+        print("AI generated clean LaTeX document.")
+    
+    # Ensure proper LaTeX encoding for special characters
+    cv_latex = ensure_latex_encoding(cv_latex)
     
     # Ensure output directory exists
     output_dir = "output"
@@ -215,22 +251,32 @@ def main():
 
     # 5. Generate Cover Letter Content
     print("Generating Cover Letter content...")
-    cl_prompt = f"Candidate Profile:\n{candidate_profile}\n\nJob Analysis:\n{json.dumps(job_analysis)}\n\nCV Content:\n{json.dumps(cv_data)}"
-    if args.message:
-        cl_prompt += f"\n\nUser Guidance:\n{args.message}\n"
-    cl_content_str = ai.generate_response(SYSTEM_PROMPT_COVER_LETTER_GENERATOR, cl_prompt)
-    cl_data = JSONParser.parse(cl_content_str)
-
-    # Load Template and Fill
+    
+    # Load the LaTeX template
     cl_template = load_file("templates/cover_letter_template.tex")
-    # Add common fields from CV data if missing in CL data
-    if 'latex_language' not in cl_data: cl_data['latex_language'] = babel_lang
-
-    # Opening fallback
-    if 'opening' not in cl_data:
-        cl_data['opening'] = "Dear Hiring Manager,"
-
-    cl_latex = fill_template(cl_template, cl_data)
+    
+    # Create prompt with template, candidate profile, job analysis, and CV LaTeX
+    cl_prompt = f"LaTeX Template:\n{cl_template}\n\n"
+    cl_prompt += f"Candidate Profile:\n{candidate_profile}\n\n"
+    cl_prompt += f"Job Analysis:\n{json.dumps(job_analysis)}\n\n"
+    cl_prompt += f"CV LaTeX Content:\n{cv_latex}\n"
+    cl_prompt += f"Babel Language: {babel_lang}\n"
+    if args.message:
+        cl_prompt += f"\nUser Guidance:\n{args.message}\n"
+    
+    # AI generates complete LaTeX document
+    cl_latex_raw = ai.generate_response(SYSTEM_PROMPT_COVER_LETTER_GENERATOR, cl_prompt)
+    cl_latex = extract_clean_latex(cl_latex_raw)
+    
+    # Provide user feedback about AI generation
+    if cl_latex_raw != cl_latex:
+        print("AI generated response with additional text. Extracted clean LaTeX for compilation.")
+    else:
+        print("AI generated clean LaTeX document.")
+    
+    # Ensure proper LaTeX encoding for special characters
+    cl_latex = ensure_latex_encoding(cl_latex)
+    
     cl_filename = "cover_letter.tex"
     cl_path = os.path.join(output_dir, cl_filename)
     save_file(cl_path, cl_latex)
@@ -244,7 +290,16 @@ def main():
 
     # 7. Generate Email
     print("Drafting Email...")
-    email_prompt = f"Job Analysis:\n{json.dumps(job_analysis)}\n\nCover Letter:\n{cl_data.get('letter_body')}"
+    # Extract letter body from cover letter LaTeX for email generation
+    # This is a simple extraction - in production you might want more sophisticated parsing
+    letter_body_start = cl_latex.find("\\begin{document}")
+    letter_body_end = cl_latex.find("\\end{document}")
+    if letter_body_start != -1 and letter_body_end != -1:
+        letter_content = cl_latex[letter_body_start:letter_body_end]
+    else:
+        letter_content = "Cover letter content"
+    
+    email_prompt = f"Job Analysis:\n{json.dumps(job_analysis)}\n\nCover Letter Content:\n{letter_content}"
     email_content_str = ai.generate_response(SYSTEM_PROMPT_EMAIL_GENERATOR, email_prompt)
     email_data = JSONParser.parse(email_content_str)
     
