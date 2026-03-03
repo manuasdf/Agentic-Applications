@@ -267,6 +267,15 @@ def main():
         return
 
     candidate_profile = load_file(config["profile_path"])
+    
+    # Load tone guide if it exists
+    tone_guide = ""
+    if os.path.exists("data/tone.md"):
+        try:
+            tone_guide = load_file("data/tone.md")
+            print("Loaded tone guide from data/tone.md")
+        except Exception as e:
+            print(f"Warning: Could not load tone guide: {e}")
 
     # 2. Analyze Job
     print("Analyzing job...")
@@ -306,6 +315,10 @@ def main():
     cv_prompt += f"Babel Language: {babel_lang}\n"
     if args.message:
         cv_prompt += f"\nUser Guidance:\n{args.message}\n"
+    
+    # Add tone guide if available
+    if tone_guide:
+        cv_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
     
     # AI generates complete LaTeX document
     cv_latex_raw = ai.generate_response(SYSTEM_PROMPT_CV_GENERATOR, cv_prompt)
@@ -351,6 +364,10 @@ def main():
     if args.message:
         cl_prompt += f"\nUser Guidance:\n{args.message}\n"
     
+    # Add tone guide if available
+    if tone_guide:
+        cl_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
+    
     # AI generates complete LaTeX document
     cl_latex_raw = ai.generate_response(SYSTEM_PROMPT_COVER_LETTER_GENERATOR, cl_prompt)
     cl_latex = extract_clean_latex(cl_latex_raw)
@@ -388,6 +405,11 @@ def main():
         letter_content = "Cover letter content"
     
     email_prompt = f"Job Analysis:\n{json.dumps(job_analysis)}\n\nCover Letter Content:\n{letter_content}"
+    
+    # Add tone guide if available
+    if tone_guide:
+        email_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
+    
     email_content_str = ai.generate_response(SYSTEM_PROMPT_EMAIL_GENERATOR, email_prompt)
     email_data = JSONParser.parse(email_content_str)
     
