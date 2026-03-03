@@ -51,9 +51,12 @@ class PDFRenderer:
             # Run pdflatex twice to resolve references if needed, but once is usually enough for simple CVs
             # Using -interaction=nonstopmode to prevent hanging on errors
             cmd = ['pdflatex', '-interaction=nonstopmode', '-output-directory', output_dir, tex_file_path]
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
-                print(f"Error rendering PDF: {result.stdout}\n{result.stderr}")
+                # Decode output with error handling for non-UTF-8 characters
+                stdout_text = result.stdout.decode('utf-8', errors='replace') if result.stdout else ""
+                stderr_text = result.stderr.decode('utf-8', errors='replace') if result.stderr else ""
+                print(f"Error rendering PDF: {stdout_text}\n{stderr_text}")
                 return False
             return True
         except Exception as e:
