@@ -284,6 +284,24 @@ def main():
     print(f"Job Title: {job_analysis.get('job_title')}")
     print(f"Company: {job_analysis.get('company')}")
     print(f"Language: {job_analysis.get('language')}")
+    
+    # Show fit analysis to user
+    fit_percentage = job_analysis.get('fit_percentage', 0)
+    recommendation = job_analysis.get('recommendation', 'neutral')
+    fit_assessment = job_analysis.get('fit_assessment', '')
+    
+    print(f"\n--- Fit Analysis ---")
+    print(f"Fit Percentage: {fit_percentage}%")
+    print(f"Recommendation: {recommendation}")
+    print(f"Assessment: {fit_assessment}")
+    print("---------------------\n")
+    
+    # Ask for user confirmation if AI discourages applying
+    if recommendation == "discourage" and fit_percentage < 60:
+        user_input = input(f"The AI analysis shows only {fit_percentage}% fit and discourages applying.\nDo you want to continue with the application process? (y/n): ")
+        if user_input.lower() != 'y':
+            print("Application process stopped by user.")
+            return
 
     # 3. Generate CV Content (conditional)
     if config["generate_cv"]:

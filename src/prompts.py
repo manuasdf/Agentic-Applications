@@ -12,6 +12,8 @@ Output a JSON object with the following fields:
 - "key_skills": A list of the most important skills required.
 - "summary": A brief summary of the role.
 - "fit_assessment": A brief assessment of what kind of candidate they are looking for.
+- "fit_percentage": An integer from 0-100 representing how well the candidate profile matches this job.
+- "recommendation": "encourage", "neutral", or "discourage" based on the fit_percentage.
 """
 
 SYSTEM_PROMPT_CV_GENERATOR = """
