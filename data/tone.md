@@ -4,13 +4,14 @@
 - Use formal but approachable language
 - Avoid slang, contractions, and colloquialisms
 - Be concise and clear in your communication
+- Avoid negation, use positive phrasing instead
 
 ## Sentence Structure
 - Use complete sentences with proper grammar
-- Vary sentence length for readability (mix short and longer sentences)
-- Avoid prepositions, use active phrasing instead
 - Start with the most important information
-- Use active voice whenever possible
+- Vary sentence length for readability (mix short and longer sentences)
+- Avoid prepositions, use active voice instead
+- Avoid lists, use STAR-method: Situation, Task, Action, and Result
 
 ## Formatting
 - Use bullet points for lists
@@ -34,3 +35,6 @@
 
 **Good:** "My background in data analysis would be valuable for this research position."
 **Avoid:** "I think I could probably do well in this research job because I know data stuff."
+
+**Good:** "I learned Z in my role doing Y."
+**Avoid:** "In my role I didn't only do X, I also did Y, and learned Z."
