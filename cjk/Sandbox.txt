@@ -1,0 +1,4 @@
+https://www.linkedin.com/jobs/view/4373458415
+
+cd ~/Dev/Agentic-Applications
+python src/main.py https://www.linkedin.com/jobs/view/4373458415
