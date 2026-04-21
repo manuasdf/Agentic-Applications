@@ -1,0 +1,17 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Reuse existing project dependencies
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+python-dotenv>=1.0.0
+
+# For PDF rendering (already in main requirements)
+pdflatex  # This is typically a system package, not pip
+# If using MikTeX or TeX Live, ensure it's installed system-wide
+
+# AI provider dependencies (already in main requirements)
+mistralai>=1.0.0
+openai>=1.0.0
+anthropic>=0.0.0
