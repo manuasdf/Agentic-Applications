@@ -28,6 +28,31 @@ class WebScraper:
             print(f"Error fetching URL {url}: {e}")
             return ""
 
+
+class PDFExtractor:
+    @staticmethod
+    def extract_text(pdf_path: str) -> str:
+        """Extract text from a PDF file."""
+        try:
+            from PyPDF2 import PdfReader
+            reader = PdfReader(pdf_path)
+            text = ""
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            # Clean up the text
+            text = text.strip()
+            # Replace multiple newlines with single newlines
+            text = re.sub(r'\n{3,}', '\n\n', text)
+            return text
+        except ImportError:
+            print("Error: PyPDF2 is not installed. Run: pip install pypdf2")
+            return ""
+        except Exception as e:
+            print(f"Error reading PDF {pdf_path}: {e}")
+            return ""
+
 class Memory:
     def __init__(self, max_items: int = 5):
         self.items: List[str] = []

@@ -9,7 +9,7 @@ from typing import Dict, Any
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.ai_interface import ProviderFactory
-from src.tools import WebScraper, PDFRenderer, JSONParser
+from src.tools import WebScraper, PDFRenderer, PDFExtractor, JSONParser
 from src.prompts import (
     SYSTEM_PROMPT_JOB_ANALYZER,
     SYSTEM_PROMPT_CV_GENERATOR,
@@ -217,7 +217,7 @@ def main():
     load_dotenv()
     
     parser = argparse.ArgumentParser(description="AutoCV Generator")
-    parser.add_argument("url", help="URL of the job posting")
+    parser.add_argument("url", nargs="?", help="URL of the job posting (or use --pdf)")
     parser.add_argument("--profile", help="Path to candidate profile (overrides config)")
     parser.add_argument("--message", help="Custom message to guide the agent")
     parser.add_argument("--provider", default="mistral", choices=["mistral", "openai", "anthropic", "xai", "deepseek", "huggingface", "local"], help="AI Provider to use")
@@ -229,6 +229,7 @@ def main():
     parser.add_argument("--no-cover-letter", action="store_true", help="Skip cover letter generation")
     parser.add_argument("--no-email", action="store_true", help="Skip email generation")
     parser.add_argument("--output-dir", help="Output directory for generated files (overrides config)")
+    parser.add_argument("--pdf", help="Path to PDF file with job description (alternative to URL)")
     
     args = parser.parse_args()
     
@@ -260,8 +261,20 @@ def main():
         print(f"Error initializing provider: {e}")
         return
 
-    print(f"Fetching job from: {args.url}")
-    job_text = WebScraper.get_page_content(args.url)
+    # Validate input: either URL or PDF must be provided
+    if not args.url and not args.pdf:
+        print("Error: Provide either a URL (positional argument) or --pdf option.")
+        print("Usage: python main.py <url>  OR  python main.py --pdf <path_to_pdf>")
+        return
+    
+    # Get job text from either URL or PDF
+    if args.pdf:
+        print(f"Extracting text from PDF: {args.pdf}")
+        job_text = PDFExtractor.extract_text(args.pdf)
+    else:
+        print(f"Fetching job from: {args.url}")
+        job_text = WebScraper.get_page_content(args.url)
+    
     if not job_text:
         print("Failed to fetch job content.")
         return

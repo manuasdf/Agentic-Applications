@@ -6,3 +6,4 @@ python-dotenv
 openai
 anthropic
 huggingface_hub
+pypdf2
