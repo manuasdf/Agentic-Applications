@@ -5,12 +5,14 @@ You will be given the text of a job posting.
 Output a JSON object with the following fields:
 - "job_title": The title of the position.
 - "company": The name of the company.
+- "location": The location of the position (city, country, or remote).
 - "contact_name": The name of the contact person.
 - "contact_email": The email of the contact person.
 - "contact_phone": The phone number of the contact person.
 - "language": The primary language of the job posting ("en" or "de").
 - "key_skills": A list of the most important skills required.
 - "summary": A brief summary of the role.
+- "average_salary": The average salary recommendation for this position and location (as a string with currency).
 - "fit_assessment": A brief assessment of what kind of candidate they are looking for.
 - "fit_percentage": An integer from 0-100 representing how well the candidate profile matches this job.
 - "recommendation": "encourage", "neutral", or "discourage" based on the fit_percentage.

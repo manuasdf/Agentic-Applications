@@ -283,6 +283,8 @@ def main():
     job_analysis = JSONParser.parse(job_analysis_str)
     print(f"Job Title: {job_analysis.get('job_title')}")
     print(f"Company: {job_analysis.get('company')}")
+    print(f"Location: {job_analysis.get('location')}")
+    print(f"Average Salary Recommendation: {job_analysis.get('average_salary')}")
     print(f"Language: {job_analysis.get('language')}")
     
     # Show fit analysis to user
@@ -435,6 +437,17 @@ def main():
     print(f"Subject: {email_data.get('subject')}")
     print(f"Body:\n{email_data.get('body')}")
     print("-------------------")
+
+    # Save raw job analysis to JSON file
+    analysis_file_path = os.path.join(output_dir, "job_analysis.json")
+    save_file(analysis_file_path, job_analysis_str)
+    print(f"\nRaw job analysis saved to: {analysis_file_path}")
+
+    # Save email to markdown file
+    email_file_path = os.path.join(output_dir, "email.md")
+    email_md_content = f"# Application Email\n\n## Subject\n\n{email_data.get('subject')}\n\n## Body\n\n{email_data.get('body')}\n"
+    save_file(email_file_path, email_md_content)
+    print(f"Email saved to: {email_file_path}")
 
 if __name__ == "__main__":
     main()
