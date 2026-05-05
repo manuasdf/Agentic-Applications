@@ -53,6 +53,23 @@ class PDFExtractor:
             print(f"Error reading PDF {pdf_path}: {e}")
             return ""
 
+
+class MarkdownExtractor:
+    @staticmethod
+    def extract_text(md_path: str) -> str:
+        """Extract text from a Markdown file."""
+        try:
+            with open(md_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            # Clean up the text
+            text = text.strip()
+            # Replace multiple newlines with single newlines
+            text = re.sub(r'\n{3,}', '\n\n', text)
+            return text
+        except Exception as e:
+            print(f"Error reading Markdown {md_path}: {e}")
+            return ""
+
 class Memory:
     def __init__(self, max_items: int = 5):
         self.items: List[str] = []

@@ -9,7 +9,7 @@ from typing import Dict, Any
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.ai_interface import ProviderFactory
-from src.tools import WebScraper, PDFRenderer, PDFExtractor, JSONParser
+from src.tools import WebScraper, PDFRenderer, PDFExtractor, MarkdownExtractor, JSONParser
 from src.prompts import (
     SYSTEM_PROMPT_JOB_ANALYZER,
     SYSTEM_PROMPT_CV_GENERATOR,
@@ -230,6 +230,7 @@ def main():
     parser.add_argument("--no-email", action="store_true", help="Skip email generation")
     parser.add_argument("--output-dir", help="Output directory for generated files (overrides config)")
     parser.add_argument("--pdf", help="Path to PDF file with job description (alternative to URL)")
+    parser.add_argument("--md", help="Path to Markdown file with job description (alternative to URL)")
     
     args = parser.parse_args()
     
@@ -261,16 +262,19 @@ def main():
         print(f"Error initializing provider: {e}")
         return
 
-    # Validate input: either URL or PDF must be provided
-    if not args.url and not args.pdf:
-        print("Error: Provide either a URL (positional argument) or --pdf option.")
-        print("Usage: python main.py <url>  OR  python main.py --pdf <path_to_pdf>")
+    # Validate input: either URL, PDF, or Markdown must be provided
+    if not args.url and not args.pdf and not args.md:
+        print("Error: Provide either a URL (positional argument), --pdf option, or --md option.")
+        print("Usage: python main.py <url>  OR  python main.py --pdf <path_to_pdf>  OR  python main.py --md <path_to_md>")
         return
     
-    # Get job text from either URL or PDF
+    # Get job text from either URL, PDF, or Markdown
     if args.pdf:
         print(f"Extracting text from PDF: {args.pdf}")
         job_text = PDFExtractor.extract_text(args.pdf)
+    elif args.md:
+        print(f"Extracting text from Markdown: {args.md}")
+        job_text = MarkdownExtractor.extract_text(args.md)
     else:
         print(f"Fetching job from: {args.url}")
         job_text = WebScraper.get_page_content(args.url)
