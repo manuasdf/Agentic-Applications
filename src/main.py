@@ -46,16 +46,16 @@ def load_config(config_path: str = None) -> dict:
             "cover_letter": "templates/cover_letter_template.tex"
         }
     }
-    
+
     if not config_path or not os.path.exists(config_path):
         if config_path == "config.json":
             print(f"Info: No config.json found, using default configuration")
         return default_config
-    
+
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             user_config = json.load(f)
-        
+
         # Merge user config with defaults (user config takes precedence)
         merged_config = default_config.copy()
         merged_config.update(user_config)
@@ -86,23 +86,23 @@ def extract_clean_latex(ai_response: str) -> str:
     # If response already looks like clean LaTeX, return as-is
     if ai_response.strip().startswith('\\documentclass') and ai_response.strip().endswith('\\end{document}'):
         return ai_response.strip()
-    
+
     # Try to extract LaTeX from code blocks (```latex ... ```)
     import re
     latex_match = re.search(r'```latex\s*(.*?)\s*```', ai_response, re.DOTALL)
     if latex_match:
         return latex_match.group(1).strip()
-    
+
     # Try to extract LaTeX from generic code blocks (``` ... ```)
     code_match = re.search(r'```\s*(.*?)\s*```', ai_response, re.DOTALL)
     if code_match:
         return code_match.group(1).strip()
-    
+
     # If no code blocks found, try to find LaTeX document structure
     doc_match = re.search(r'\\documentclass.*?\\end{document}', ai_response, re.DOTALL)
     if doc_match:
         return doc_match.group(0).strip()
-    
+
     # Fallback: return the original response (might fail compilation)
     return ai_response.strip()
 
@@ -113,7 +113,7 @@ def ensure_latex_encoding(latex_content: str) -> str:
     """
     # First ensure the content is valid UTF-8
     latex_content = clean_utf8_content(latex_content)
-    
+
     # Check if UTF-8 inputenc is already present
     if r'\usepackage[utf8]{inputenc}' not in latex_content and r'\usepackage[utf8x]{inputenc}' not in latex_content:
         # Find the document class line and insert inputenc after it
@@ -124,7 +124,7 @@ def ensure_latex_encoding(latex_content: str) -> str:
                 lines.insert(i+1, r'\usepackage[utf8]{inputenc}')
                 latex_content = '\n'.join(lines)
                 break
-    
+
     # Ensure T1 font encoding for better character support
     if r'\usepackage[T1]{fontenc}' not in latex_content:
         lines = latex_content.split('\n')
@@ -141,7 +141,7 @@ def ensure_latex_encoding(latex_content: str) -> str:
                     lines.insert(i+1, r'\usepackage[T1]{fontenc}')
                     latex_content = '\n'.join(lines)
                     break
-    
+
     return latex_content
 
 def fill_template(template: str, data: Dict[str, Any]) -> str:
@@ -149,15 +149,15 @@ def fill_template(template: str, data: Dict[str, Any]) -> str:
     for key, value in data.items():
         placeholder = f"<<{key}>>"
         if isinstance(value, list):
-            # Handle lists specifically for LaTeX sections if needed, 
-            # but for now assume the AI generates the full LaTeX section string 
+            # Handle lists specifically for LaTeX sections if needed,
+            # but for now assume the AI generates the full LaTeX section string
             # or we join them.
             # If the key ends with _section, we expect a string.
             # If it's a list, we might need to format it.
             # For this MVP, let's assume the AI returns formatted strings for sections
             # OR we do simple joining.
             pass
-        
+
         if value is not None:
              template = template.replace(placeholder, str(value))
     return template
@@ -215,7 +215,7 @@ def format_languages(languages_list: list) -> str:
 
 def main():
     load_dotenv()
-    
+
     parser = argparse.ArgumentParser(description="AutoCV Generator")
     parser.add_argument("url", nargs="?", help="URL of the job posting (or use --pdf)")
     parser.add_argument("--profile", help="Path to candidate profile (overrides config)")
@@ -231,13 +231,13 @@ def main():
     parser.add_argument("--output-dir", help="Output directory for generated files (overrides config)")
     parser.add_argument("--pdf", help="Path to PDF file with job description (alternative to URL)")
     parser.add_argument("--md", help="Path to Markdown file with job description (alternative to URL)")
-    
+
     args = parser.parse_args()
-    
+
     # Load configuration - use 'config.json' as default if no --config specified
     config_path = args.config if args.config else "config.json"
     config = load_config(config_path)
-    
+
     # Override config with command line arguments
     if args.profile:
         config["profile_path"] = args.profile
@@ -253,7 +253,7 @@ def main():
     # 1. Setup
     try:
         ai = ProviderFactory.get_provider(
-            args.provider, 
+            args.provider,
             api_key=args.api_key,
             api_base=args.api_base,
             model_name=args.model
@@ -267,7 +267,7 @@ def main():
         print("Error: Provide either a URL (positional argument), --pdf option, or --md option.")
         print("Usage: python main.py <url>  OR  python main.py --pdf <path_to_pdf>  OR  python main.py --md <path_to_md>")
         return
-    
+
     # Get job text from either URL, PDF, or Markdown
     if args.pdf:
         print(f"Extracting text from PDF: {args.pdf}")
@@ -278,13 +278,13 @@ def main():
     else:
         print(f"Fetching job from: {args.url}")
         job_text = WebScraper.get_page_content(args.url)
-    
+
     if not job_text:
         print("Failed to fetch job content.")
         return
 
     candidate_profile = load_file(config["profile_path"])
-    
+
     # Load tone guide if it exists
     tone_guide = ""
     if os.path.exists("data/tone.md"):
@@ -303,18 +303,18 @@ def main():
     print(f"Location: {job_analysis.get('location')}")
     print(f"Average Salary Recommendation: {job_analysis.get('average_salary')}")
     print(f"Language: {job_analysis.get('language')}")
-    
+
     # Show fit analysis to user
     fit_percentage = job_analysis.get('fit_percentage', 0)
     recommendation = job_analysis.get('recommendation', 'neutral')
     fit_assessment = job_analysis.get('fit_assessment', '')
-    
+
     print(f"\n--- Fit Analysis ---")
     print(f"Fit Percentage: {fit_percentage}%")
     print(f"Recommendation: {recommendation}")
     print(f"Assessment: {fit_assessment}")
     print("---------------------\n")
-    
+
     # Ask for user confirmation if AI discourages applying
     if recommendation == "discourage" and fit_percentage < 60:
         user_input = input(f"The AI analysis shows only {fit_percentage}% fit and discourages applying.\nDo you want to continue with the application process? (y/n): ")
@@ -325,16 +325,16 @@ def main():
     # 3. Generate CV Content (conditional)
     if config["generate_cv"]:
         print("Generating CV content...")
-        
+
         # Load the LaTeX template
         cv_template = load_file(config["templates"]["cv"])
-    
+
     # Set latex language based on job analysis
     def get_babel_language(lang_code: str) -> str:
         """Maps job language code/name to Babel package option."""
         if not lang_code:
             return "english"
-        
+
         lang_lower = lang_code.lower()
         if "de" in lang_lower or "german" in lang_lower or "deutsch" in lang_lower:
             return "ngerman"
@@ -344,7 +344,7 @@ def main():
         return "english"
 
     babel_lang = get_babel_language(job_analysis.get('language'))
-    
+
     # Create prompt with template, candidate profile, and job analysis
     cv_prompt = f"LaTeX Template:\n{cv_template}\n\n"
     cv_prompt += f"Candidate Profile:\n{candidate_profile}\n\n"
@@ -352,28 +352,28 @@ def main():
     cv_prompt += f"Babel Language: {babel_lang}\n"
     if args.message:
         cv_prompt += f"\nUser Guidance:\n{args.message}\n"
-    
+
     # Add tone guide if available
     if tone_guide:
         cv_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
-    
+
     # AI generates complete LaTeX document
     cv_latex_raw = ai.generate_response(SYSTEM_PROMPT_CV_GENERATOR, cv_prompt)
     cv_latex = extract_clean_latex(cv_latex_raw)
-    
+
     # Provide user feedback about AI generation
     if cv_latex_raw != cv_latex:
         print("AI generated response with additional text. Extracted clean LaTeX for compilation.")
     else:
         print("AI generated clean LaTeX document.")
-    
+
     # Ensure proper LaTeX encoding for special characters
     cv_latex = ensure_latex_encoding(cv_latex)
-    
+
     # Ensure output directory exists
     output_dir = config["output_dir"]
     os.makedirs(output_dir, exist_ok=True)
-    
+
     cv_filename = "cv.tex"
     cv_path = os.path.join(output_dir, cv_filename)
     save_file(cv_path, cv_latex)
@@ -388,10 +388,10 @@ def main():
     # 5. Generate Cover Letter Content (conditional)
     if config["generate_cover_letter"]:
         print("Generating Cover Letter content...")
-        
+
         # Load the LaTeX template
         cl_template = load_file(config["templates"]["cover_letter"])
-    
+
     # Create prompt with template, candidate profile, job analysis, and CV LaTeX
     cl_prompt = f"LaTeX Template:\n{cl_template}\n\n"
     cl_prompt += f"Candidate Profile:\n{candidate_profile}\n\n"
@@ -400,24 +400,24 @@ def main():
     cl_prompt += f"Babel Language: {babel_lang}\n"
     if args.message:
         cl_prompt += f"\nUser Guidance:\n{args.message}\n"
-    
+
     # Add tone guide if available
     if tone_guide:
         cl_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
-    
+
     # AI generates complete LaTeX document
     cl_latex_raw = ai.generate_response(SYSTEM_PROMPT_COVER_LETTER_GENERATOR, cl_prompt)
     cl_latex = extract_clean_latex(cl_latex_raw)
-    
+
     # Provide user feedback about AI generation
     if cl_latex_raw != cl_latex:
         print("AI generated response with additional text. Extracted clean LaTeX for compilation.")
     else:
         print("AI generated clean LaTeX document.")
-    
+
     # Ensure proper LaTeX encoding for special characters
     cl_latex = ensure_latex_encoding(cl_latex)
-    
+
     cl_filename = "cover_letter.tex"
     cl_path = os.path.join(output_dir, cl_filename)
     save_file(cl_path, cl_latex)
@@ -440,20 +440,15 @@ def main():
         letter_content = cl_latex[letter_body_start:letter_body_end]
     else:
         letter_content = "Cover letter content"
-    
+
     email_prompt = f"Job Analysis:\n{json.dumps(job_analysis)}\n\nCover Letter Content:\n{letter_content}"
-    
+
     # Add tone guide if available
     if tone_guide:
         email_prompt += f"\n\nTone and Style Guide:\n{tone_guide}\n"
-    
+
     email_content_str = ai.generate_response(SYSTEM_PROMPT_EMAIL_GENERATOR, email_prompt)
     email_data = JSONParser.parse(email_content_str)
-    
-    print("\n--- Draft Email ---")
-    print(f"Subject: {email_data.get('subject')}")
-    print(f"Body:\n{email_data.get('body')}")
-    print("-------------------")
 
     # Save raw job analysis to JSON file
     analysis_file_path = os.path.join(output_dir, "job_analysis.json")
