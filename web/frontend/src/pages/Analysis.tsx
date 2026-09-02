@@ -29,6 +29,7 @@ export default function AnalysisPage() {
 
   const [selectedProfile, setSelectedProfile] = useState<string>('');
   const [provider, setProvider] = useState<AIProvider>(settings.default_provider);
+  const [model, setModel] = useState<string>(settings.default_model || '');
   const [apiKey, setApiKey] = useState('');
   const [babelLanguage, setBabelLanguage] = useState(settings.babel_language || 'english');
   const [toneGuide, setToneGuide] = useState('');
@@ -65,10 +66,11 @@ export default function AnalysisPage() {
     }
   }, [profiles]);
 
-  // Update provider from settings
+  // Update provider and model from settings
   useEffect(() => {
     setProvider(settings.default_provider);
-  }, [settings.default_provider]);
+    setModel(settings.default_model || '');
+  }, [settings.default_provider, settings.default_model]);
 
   // No analysis - redirect to home
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function AnalysisPage() {
         await generateCV(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
         );
       }
 
@@ -135,7 +137,7 @@ export default function AnalysisPage() {
         await generateCoverLetter(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
         );
       }
 
@@ -143,7 +145,7 @@ export default function AnalysisPage() {
         await generateEmail(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
         );
       }
 
@@ -428,6 +430,126 @@ export default function AnalysisPage() {
               <option value="deepseek">DeepSeek</option>
               <option value="local">Local (Ollama)</option>
             </select>
+          </div>
+          
+          {/* Model selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Model
+            </label>
+            <details className="w-full">
+              <summary className="cursor-pointer px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700">
+                {model || 'Select a model'}
+              </summary>
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3 max-h-60 overflow-y-auto">
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="Enter custom model name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 text-center">or select from popular models:</p>
+                <div className="space-y-2">
+                  {(provider === 'mistral' || provider === 'mistral-small-2603') && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">Mistral Models</h4>
+                      <div className="space-y-1">
+                        {['mistral-large', 'mistral-small', 'mistral-tiny'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {provider === 'openai' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">OpenAI Models</h4>
+                      <div className="space-y-1">
+                        {['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {provider === 'anthropic' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">Anthropic Models</h4>
+                      <div className="space-y-1">
+                        {['claude-3-5-sonnet-20250620', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {provider === 'xai' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">xAI Models</h4>
+                      <div className="space-y-1">
+                        {['grok-2', 'grok-beta'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {provider === 'deepseek' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">DeepSeek Models</h4>
+                      <div className="space-y-1">
+                        {['deepseek-chat', 'deepseek-coder'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {provider === 'local' && (
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 mb-1">Local Models (Ollama)</h4>
+                      <div className="space-y-1">
+                        {['llama3', 'llama3.2', 'mistral', 'phi3', 'qwen2'].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className="block w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 

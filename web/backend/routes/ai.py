@@ -39,7 +39,7 @@ def _get_provider(provider_name: str, api_key: Optional[str] = None, api_base: O
 async def generate_ai_response(request: AIRequest):
     """
     Generate an AI response using the specified provider.
-    
+
     Acts as a proxy to hide API keys from the frontend.
     """
     try:
@@ -49,19 +49,19 @@ async def generate_ai_response(request: AIRequest):
             api_base=request.api_base,
             model_name=request.model
         )
-        
+
         response = provider.generate_response(
             system_prompt=request.system_prompt,
             user_prompt=request.user_prompt,
             model=request.model
         )
-        
+
         return AIResponse(
             content=response,
             provider=request.provider.value if hasattr(request.provider, 'value') else request.provider,
             model=request.model
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -73,7 +73,7 @@ async def generate_ai_response(request: AIRequest):
 async def analyze_job_posting(request: JobAnalysisRequest):
     """
     Analyze a job posting to extract key information and fit assessment.
-    
+
     Uses the JOB_ANALYZER prompt to parse and analyze job requirements.
     """
     try:
@@ -82,20 +82,23 @@ async def analyze_job_posting(request: JobAnalysisRequest):
             api_key=request.api_key,
             model_name=request.model
         )
-        
+        print(provider)
+
         raw_response = provider.generate_response(
             system_prompt=SYSTEM_PROMPT_JOB_ANALYZER,
-            user_prompt=request.job_text
+            user_prompt=request.job_text,
+            model=request.model
         )
-        
+        print(raw_response)
+
         # Parse the JSON response
         analysis = JSONParser.parse(raw_response)
-        
+
         return JobAnalysisResponse(
             analysis=analysis,
             raw_response=raw_response
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -108,35 +111,36 @@ async def generate_cv(request: GenerateDocumentRequest):
     try:
         if request.document_type != "cv":
             raise HTTPException(status_code=400, detail="Expected document_type='cv'")
-        
+
         provider = _get_provider(
             request.provider,
             api_key=request.api_key,
             model_name=request.model
         )
-        
+
         # Build the prompt
         prompt_parts = []
-        
+
         if request.template:
             prompt_parts.append(f"LaTeX Template:\n{request.template}\n\n")
-        
+
         prompt_parts.append(f"Candidate Profile:\n{request.candidate_profile}\n\n")
         prompt_parts.append(f"Job Analysis:\n{request.job_analysis}\n")
-        
+
         if request.babel_language:
             prompt_parts.append(f"Babel Language: {request.babel_language}\n")
-        
+
         if request.tone_guide:
             prompt_parts.append(f"\nTone and Style Guide:\n{request.tone_guide}\n")
-        
+
         user_prompt = "\n".join(prompt_parts)
-        
+
         raw_response = provider.generate_response(
             system_prompt=SYSTEM_PROMPT_CV_GENERATOR,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            model=request.model
         )
-        
+
         # Extract clean LaTeX
         import re
         latex_match = re.search(r'```latex\s*(.*?)\s*```', raw_response, re.DOTALL)
@@ -146,13 +150,13 @@ async def generate_cv(request: GenerateDocumentRequest):
             # Try to find document structure
             doc_match = re.search(r'\\documentclass.*?\\end{document}', raw_response, re.DOTALL)
             latex = doc_match.group(0).strip() if doc_match else raw_response.strip()
-        
+
         return GenerateDocumentResponse(
             latex=latex,
             document_type="cv",
             success=True
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -168,35 +172,36 @@ async def generate_cover_letter(request: GenerateDocumentRequest):
     try:
         if request.document_type != "cover_letter":
             raise HTTPException(status_code=400, detail="Expected document_type='cover_letter'")
-        
+
         provider = _get_provider(
             request.provider,
             api_key=request.api_key,
             model_name=request.model
         )
-        
+
         # Build the prompt
         prompt_parts = []
-        
+
         if request.template:
             prompt_parts.append(f"LaTeX Template:\n{request.template}\n\n")
-        
+
         prompt_parts.append(f"Candidate Profile:\n{request.candidate_profile}\n\n")
         prompt_parts.append(f"Job Analysis:\n{request.job_analysis}\n")
-        
+
         if request.babel_language:
             prompt_parts.append(f"Babel Language: {request.babel_language}\n")
-        
+
         if request.tone_guide:
             prompt_parts.append(f"\nTone and Style Guide:\n{request.tone_guide}\n")
-        
+
         user_prompt = "\n".join(prompt_parts)
-        
+
         raw_response = provider.generate_response(
             system_prompt=SYSTEM_PROMPT_COVER_LETTER_GENERATOR,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            model=request.model
         )
-        
+
         # Extract clean LaTeX
         import re
         latex_match = re.search(r'```latex\s*(.*?)\s*```', raw_response, re.DOTALL)
@@ -205,13 +210,13 @@ async def generate_cover_letter(request: GenerateDocumentRequest):
         else:
             doc_match = re.search(r'\\documentclass.*?\\end{document}', raw_response, re.DOTALL)
             latex = doc_match.group(0).strip() if doc_match else raw_response.strip()
-        
+
         return GenerateDocumentResponse(
             latex=latex,
             document_type="cover_letter",
             success=True
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -227,37 +232,38 @@ async def generate_email(request: GenerateDocumentRequest):
     try:
         if request.document_type != "email":
             raise HTTPException(status_code=400, detail="Expected document_type='email'")
-        
+
         provider = _get_provider(
             request.provider,
             api_key=request.api_key,
             model_name=request.model
         )
-        
+
         # Build the prompt
         prompt_parts = []
         prompt_parts.append(f"Job Analysis:\n{request.job_analysis}\n\n")
         prompt_parts.append(f"Candidate Profile:\n{request.candidate_profile}\n")
-        
+
         if request.tone_guide:
             prompt_parts.append(f"\nTone and Style Guide:\n{request.tone_guide}\n")
-        
+
         user_prompt = "\n".join(prompt_parts)
-        
+
         raw_response = provider.generate_response(
             system_prompt=SYSTEM_PROMPT_EMAIL_GENERATOR,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            model=request.model
         )
-        
+
         # Parse JSON response
         email_data = JSONParser.parse(raw_response)
-        
+
         return GenerateDocumentResponse(
             content=raw_response,
             document_type="email",
             success=True
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,

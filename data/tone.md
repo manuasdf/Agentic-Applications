@@ -38,3 +38,18 @@
 
 **Good:** "I learned Z in my role doing Y."
 **Avoid:** "In my role I didn't only do X, I also did Y, and learned Z."
+
+## Lists
+
+In lists, use only main clause. 
+
+Examples: 
+
+**Good:** \item Owned frontend architecture across n features.
+**Avoid:** \item Owned frontend architecture across n features, ensuring long-term maintainability.
+
+**Good:** \item Migrated state management from X to Y across all applications.
+**Avoid:** \item Migrated state management from X to Y across all applications, improving performance and developer experience.
+
+**Good:** \item Led the migration of all blank from X to Y.
+**Avoid:** \item Led the migration of all blank from X to Y, modernising the technology stack.

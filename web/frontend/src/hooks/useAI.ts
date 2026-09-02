@@ -65,10 +65,10 @@ export interface AIState {
 interface UseAIResult extends AIState {
   // Actions
   scrape: (url: string) => Promise<void>;
-  analyze: (jobText: string, provider?: AIProvider, apiKey?: string) => Promise<JobAnalysisResponse | undefined>;
-  generateCV: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; template?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
-  generateCoverLetter: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; template?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
-  generateEmail: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
+  analyze: (jobText: string, provider?: AIProvider, apiKey?: string, model?: string) => Promise<JobAnalysisResponse | undefined>;
+  generateCV: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
+  generateCoverLetter: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
+  generateEmail: (analysis: JobAnalysis, profile: string, options?: { provider?: AIProvider; apiKey?: string; model?: string; babelLanguage?: string; toneGuide?: string }) => Promise<string | undefined>;
   compileDocument: (latex: string) => Promise<string | undefined>;
   fullGenerate: (request: FullGenerationRequest) => Promise<FullGenerationResult>;
   checkHealth: () => Promise<boolean>;
@@ -127,7 +127,7 @@ export function useAI(): UseAIResult {
   }, []);
 
   // Analyze job posting
-  const analyze = useCallback(async (jobText: string, provider?: AIProvider, apiKey?: string) => {
+  const analyze = useCallback(async (jobText: string, provider?: AIProvider, apiKey?: string, model?: string) => {
     setState(prev => ({ 
       ...prev, 
       isAnalyzing: true, 
@@ -141,6 +141,7 @@ export function useAI(): UseAIResult {
         job_text: jobText,
         provider: provider || 'mistral',
         api_key: apiKey,
+        model: model,
       });
       
       setState(prev => ({
@@ -165,7 +166,7 @@ export function useAI(): UseAIResult {
   const generateCV = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
-    options?: { provider?: AIProvider; apiKey?: string; template?: string; babelLanguage?: string; toneGuide?: string }
+    options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }
   ) => {
     try {
       const response = await generateCV({
@@ -174,6 +175,7 @@ export function useAI(): UseAIResult {
         candidate_profile: profile,
         provider: options?.provider || 'mistral',
         api_key: options?.apiKey,
+        model: options?.model,
         template: options?.template,
         babel_language: options?.babelLanguage || 'english',
         tone_guide: options?.toneGuide,
@@ -197,7 +199,7 @@ export function useAI(): UseAIResult {
   const generateCoverLetter = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
-    options?: { provider?: AIProvider; apiKey?: string; template?: string; babelLanguage?: string; toneGuide?: string }
+    options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }
   ) => {
     try {
       const response = await generateCoverLetter({
@@ -206,6 +208,7 @@ export function useAI(): UseAIResult {
         candidate_profile: profile,
         provider: options?.provider || 'mistral',
         api_key: options?.apiKey,
+        model: options?.model,
         template: options?.template,
         babel_language: options?.babelLanguage || 'english',
         tone_guide: options?.toneGuide,
@@ -229,7 +232,7 @@ export function useAI(): UseAIResult {
   const generateEmail = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
-    options?: { provider?: AIProvider; apiKey?: string; babelLanguage?: string; toneGuide?: string }
+    options?: { provider?: AIProvider; apiKey?: string; model?: string; babelLanguage?: string; toneGuide?: string }
   ) => {
     try {
       const response = await generateEmail({
@@ -238,6 +241,7 @@ export function useAI(): UseAIResult {
         candidate_profile: profile,
         provider: options?.provider || 'mistral',
         api_key: options?.apiKey,
+        model: options?.model,
         babel_language: options?.babelLanguage || 'english',
         tone_guide: options?.toneGuide,
       });

@@ -12,6 +12,6 @@ pdflatex  # This is typically a system package, not pip
 # If using MikTeX or TeX Live, ensure it's installed system-wide
 
 # AI provider dependencies (already in main requirements)
-mistralai>=1.0.0
+mistralai>=2.9.4
 openai>=1.0.0
 anthropic>=0.0.0

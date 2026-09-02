@@ -131,13 +131,122 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Default Model
             </label>
-            <input
-              type="text"
-              value={formSettings.default_model || ''}
-              onChange={(e) => handleSettingChange('default_model', e.target.value)}
-              placeholder="e.g., mistral-large-latest, gpt-4o"
-              className="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <details className="w-full max-w-md">
+              <summary className="cursor-pointer px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700">
+                {formSettings.default_model || 'Select a model'}
+              </summary>
+              <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4 max-h-80 overflow-y-auto">
+                <p className="text-sm text-gray-500">
+                  Select a model or enter a custom one
+                </p>
+                
+                {/* Model categories by provider */}
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Mistral</h4>
+                    <div className="space-y-1">
+                      {['mistral-large', 'mistral-small', 'mistral-tiny', 'mistral-small-2603', 'mistral-large-2603'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">OpenAI</h4>
+                    <div className="space-y-1">
+                      {['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Anthropic</h4>
+                    <div className="space-y-1">
+                      {['claude-3-5-sonnet-20250620', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">xAI</h4>
+                    <div className="space-y-1">
+                      {['grok-2', 'grok-beta', 'grok-1'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">DeepSeek</h4>
+                    <div className="space-y-1">
+                      {['deepseek-chat', 'deepseek-coder'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Local (Ollama)</h4>
+                    <div className="space-y-1">
+                      {['llama3', 'llama3.2', 'mistral', 'phi3', 'qwen2'].map(model => (
+                        <button
+                          key={model}
+                          onClick={() => handleSettingChange('default_model', model)}
+                          className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors"
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-3 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custom Model
+                  </label>
+                  <input
+                    type="text"
+                    value={formSettings.default_model || ''}
+                    onChange={(e) => handleSettingChange('default_model', e.target.value)}
+                    placeholder="Enter custom model name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+            </details>
             <p className="mt-1 text-sm text-gray-500">
               The default model to use (can be overridden per request)
             </p>
