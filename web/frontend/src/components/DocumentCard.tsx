@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { compileLatexRaw } from '@/services/api';
 
 export interface DocumentCardProps {
@@ -25,7 +25,7 @@ export default function DocumentCard({
   const [compileError, setCompileError] = useState<string | null>(null);
 
   // Convert base64 to blob URL
-  useState(() => {
+  useEffect(() => {
     if (pdfBase64) {
       const binaryString = atob(pdfBase64);
       const bytes = new Uint8Array(binaryString.length);

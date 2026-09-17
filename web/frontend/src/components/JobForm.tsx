@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppState } from '@/hooks/useLocalStorage';
+import { useAppState } from '@/hooks/useIndexedDBStorage';
 import { useAI } from '@/hooks/useAI';
 import { AIProvider, JobAnalysis } from '@/types';
-import { loadFromStorage, STORAGE_KEYS, DEFAULT_SETTINGS } from '@/hooks/useLocalStorage';
 
 export interface JobFormProps {
   onSubmit?: (job: { url: string; profile: string }) => void;
@@ -12,7 +11,7 @@ export interface JobFormProps {
 
 export default function JobForm({ onSubmit, onAnalysisComplete }: JobFormProps) {
   const navigate = useNavigate();
-  const { profiles, addProfile, settings } = useAppState();
+  const { profiles, addProfile, settings, jobs, updateJob } = useAppState();
   const { scrape, analyze, isScraping, isAnalyzing, analysis, scrapeError, analysisError, jobText, jobUrl } = useAI();
   
   const [url, setUrl] = useState('');
@@ -86,23 +85,39 @@ export default function JobForm({ onSubmit, onAnalysisComplete }: JobFormProps) 
     }
   }, [url, selectedProfileId, newProfileName, newProfileContent, profiles, addProfile, onSubmit, scrape]);
 
-  // Handle analysis after scraping
+  // Handle scraping completion - save job text
   useEffect(() => {
     if (jobText && jobUrl) {
+      // Get the most recent job from useAppState
+      if (jobs.length > 0) {
+        const lastJob = jobs[jobs.length - 1];
+        // Update the most recent job with the scraped text
+        updateJob(lastJob.id, { text: jobText, title: jobUrl || lastJob.title });
+      }
+      
       // Auto-analyze if we have job text
       const apiKeyToUse = apiKey || settings.api_keys?.[provider];
       analyze(jobText, provider, apiKeyToUse || undefined, model || undefined);
     }
-  }, [jobText, jobUrl, analyze, provider, apiKey, model, settings]);
+  }, [jobText, jobUrl, analyze, provider, apiKey, model, settings, jobs, updateJob]);
 
   // Handle analysis completion
   useEffect(() => {
-    if (analysis && onAnalysisComplete) {
-      onAnalysisComplete(analysis);
+    if (analysis) {
+      // Save analysis to the most recent job
+      if (jobs.length > 0) {
+        const lastJob = jobs[jobs.length - 1];
+        // Update the most recent job with analysis
+        updateJob(lastJob.id, { text: jobText || lastJob.text, analysis });
+      }
+      
+      if (onAnalysisComplete) {
+        onAnalysisComplete(analysis);
+      }
       // Navigate to analysis page
       navigate('/analyze');
     }
-  }, [analysis, onAnalysisComplete, navigate]);
+  }, [analysis, onAnalysisComplete, navigate, jobUrl, jobText, jobs, updateJob]);
 
   // Load API key from settings
   useEffect(() => {

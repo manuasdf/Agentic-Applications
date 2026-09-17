@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAI } from '@/hooks/useAI';
+import { useAppState } from '@/hooks/useIndexedDBStorage';
 import { compileLatexRaw } from '@/services/api';
 import DocumentCard from '@/components/DocumentCard';
+import { loadDocumentsByJob, isIndexedDBAvailable, StoredDocument } from '@/services/indexedDB';
 
 export default function ReviewPage() {
   const navigate = useNavigate();
+  const { jobs } = useAppState();
   const {
     analysis,
     cvLatex,
@@ -14,7 +17,6 @@ export default function ReviewPage() {
     cvPdfBase64,
     coverLetterPdfBase64,
     jobUrl,
-    jobText,
     reset,
   } = useAI();
 
@@ -22,6 +24,9 @@ export default function ReviewPage() {
     cv: null as string | null,
     cover_letter: null as string | null,
   });
+  
+  // Documents loaded from IndexedDB
+  const [storedDocuments, setStoredDocuments] = useState<StoredDocument[]>([]);
   const [isCompiling, setIsCompiling] = useState({
     cv: false,
     cover_letter: false,
@@ -31,10 +36,25 @@ export default function ReviewPage() {
     cover_letter: null as string | null,
   });
 
+  // Load documents from IndexedDB on mount
+  useEffect(() => {
+    if (!isIndexedDBAvailable() || jobs.length === 0) return;
+    
+    // Get the most recent job
+    const mostRecentJob = jobs[jobs.length - 1];
+    if (!mostRecentJob) return;
+    
+    loadDocumentsByJob(mostRecentJob.id)
+      .then(docs => setStoredDocuments(docs))
+      .catch(e => console.error('Failed to load documents in Review:', e));
+  }, [jobs]);
+
   // Convert base64 PDFs to blob URLs on mount
+  // Combine from useAI state and IndexedDB stored documents
   useEffect(() => {
     const urls: any = {};
     
+    // Check useAI state first
     if (cvPdfBase64) {
       try {
         const binaryString = atob(cvPdfBase64);
@@ -46,6 +66,24 @@ export default function ReviewPage() {
         urls.cv = URL.createObjectURL(blob);
       } catch (e) {
         console.error('Error converting CV PDF:', e);
+      }
+    }
+    
+    // Also check stored documents from IndexedDB
+    if (!urls.cv) {
+      const cvDoc = storedDocuments.find(d => d.documentType === 'cv' && d.pdfBase64);
+      if (cvDoc?.pdfBase64) {
+        try {
+          const binaryString = atob(cvDoc.pdfBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          urls.cv = URL.createObjectURL(blob);
+        } catch (e) {
+          console.error('Error converting CV PDF from IndexedDB:', e);
+        }
       }
     }
 
@@ -62,6 +100,24 @@ export default function ReviewPage() {
         console.error('Error converting Cover Letter PDF:', e);
       }
     }
+    
+    // Also check stored documents from IndexedDB
+    if (!urls.cover_letter) {
+      const clDoc = storedDocuments.find(d => d.documentType === 'cover_letter' && d.pdfBase64);
+      if (clDoc?.pdfBase64) {
+        try {
+          const binaryString = atob(clDoc.pdfBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          urls.cover_letter = URL.createObjectURL(blob);
+        } catch (e) {
+          console.error('Error converting Cover Letter PDF from IndexedDB:', e);
+        }
+      }
+    }
 
     setPdfBlobUrls(urls);
 
@@ -69,18 +125,15 @@ export default function ReviewPage() {
       if (urls.cv) URL.revokeObjectURL(urls.cv);
       if (urls.cover_letter) URL.revokeObjectURL(urls.cover_letter);
     };
-  }, [cvPdfBase64, coverLetterPdfBase64]);
+  }, [cvPdfBase64, coverLetterPdfBase64, storedDocuments]);
 
-  // Check if we have anything to display
-  useEffect(() => {
-    if (!cvLatex && !coverLetterLatex && !emailContent && !cvPdfBase64 && !coverLetterPdfBase64) {
-      navigate('/');
-    }
-  }, [cvLatex, coverLetterLatex, emailContent, cvPdfBase64, coverLetterPdfBase64, navigate]);
+
 
   // Compile a document
   const handleCompile = useCallback(async (docType: 'cv' | 'cover_letter') => {
-    const latex = docType === 'cv' ? cvLatex : coverLetterLatex;
+    const latex = docType === 'cv' 
+      ? cvLatex || storedDocuments.find(d => d.documentType === 'cv')?.latex
+      : coverLetterLatex || storedDocuments.find(d => d.documentType === 'cover_letter')?.latex;
     if (!latex) return;
 
     setIsCompiling(prev => ({ ...prev, [docType]: true }));
@@ -100,16 +153,21 @@ export default function ReviewPage() {
     }
   }, [cvLatex, coverLetterLatex]);
 
-  // Navigate to home if no documents
-  if (!cvLatex && !coverLetterLatex && !emailContent && !cvPdfBase64 && !coverLetterPdfBase64) {
+  // Navigate to home if no documents (check both useAI state and IndexedDB)
+  const hasDocuments = cvLatex || coverLetterLatex || emailContent || 
+                      cvPdfBase64 || coverLetterPdfBase64 || 
+                      storedDocuments.length > 0;
+  
+  if (!hasDocuments) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">No documents to review.</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">No Documents to Review</h2>
+        <p className="text-gray-600 mb-6">Generate documents first by analyzing a job posting.</p>
         <button
           onClick={() => navigate('/')}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Create New Documents
+          Go to Home
         </button>
       </div>
     );
@@ -183,11 +241,11 @@ export default function ReviewPage() {
                   <span className="text-gray-700">CV</span>
                 </div>
                 <span className={`text-sm px-2 py-1 rounded-full ${
-                  cvLatex || cvPdfBase64 || pdfBlobUrls.cv
+                  cvLatex || cvPdfBase64 || pdfBlobUrls.cv || storedDocuments.some(d => d.documentType === 'cv' && (d.latex || d.pdfBase64))
                     ? 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {cvLatex || cvPdfBase64 || pdfBlobUrls.cv ? 'Ready' : 'Not generated'}
+                  {cvLatex || cvPdfBase64 || pdfBlobUrls.cv || storedDocuments.some(d => d.documentType === 'cv' && (d.latex || d.pdfBase64)) ? 'Ready' : 'Not generated'}
                 </span>
               </div>
 
@@ -199,11 +257,11 @@ export default function ReviewPage() {
                   <span className="text-gray-700">Cover Letter</span>
                 </div>
                 <span className={`text-sm px-2 py-1 rounded-full ${
-                  coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter
+                  coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter || storedDocuments.some(d => d.documentType === 'cover_letter' && (d.latex || d.pdfBase64))
                     ? 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter ? 'Ready' : 'Not generated'}
+                  {coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter || storedDocuments.some(d => d.documentType === 'cover_letter' && (d.latex || d.pdfBase64)) ? 'Ready' : 'Not generated'}
                 </span>
               </div>
 
@@ -215,9 +273,11 @@ export default function ReviewPage() {
                   <span className="text-gray-700">Email</span>
                 </div>
                 <span className={`text-sm px-2 py-1 rounded-full ${
-                  emailContent ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  emailContent || storedDocuments.some(d => d.documentType === 'email' && d.content)
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {emailContent ? 'Ready' : 'Not generated'}
+                  {emailContent || storedDocuments.some(d => d.documentType === 'email' && d.content) ? 'Ready' : 'Not generated'}
                 </span>
               </div>
             </div>
@@ -226,11 +286,11 @@ export default function ReviewPage() {
       </div>
 
       {/* CV Document */}
-      {(cvLatex || cvPdfBase64 || pdfBlobUrls.cv) && (
+      {(cvLatex || cvPdfBase64 || pdfBlobUrls.cv || storedDocuments.some(d => d.documentType === 'cv' && (d.latex || d.pdfBase64))) && (
         <DocumentCard
           title="CV"
-          latex={cvLatex}
-          pdfBase64={cvPdfBase64}
+          latex={cvLatex || storedDocuments.find(d => d.documentType === 'cv')?.latex}
+          pdfBase64={cvPdfBase64 || storedDocuments.find(d => d.documentType === 'cv')?.pdfBase64}
           isLoading={isCompiling.cv}
           error={compileErrors.cv || undefined}
           onCompile={() => handleCompile('cv')}
@@ -238,11 +298,11 @@ export default function ReviewPage() {
       )}
 
       {/* Cover Letter Document */}
-      {(coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter) && (
+      {(coverLetterLatex || coverLetterPdfBase64 || pdfBlobUrls.cover_letter || storedDocuments.some(d => d.documentType === 'cover_letter' && (d.latex || d.pdfBase64))) && (
         <DocumentCard
           title="Cover Letter"
-          latex={coverLetterLatex}
-          pdfBase64={coverLetterPdfBase64}
+          latex={coverLetterLatex || storedDocuments.find(d => d.documentType === 'cover_letter')?.latex}
+          pdfBase64={coverLetterPdfBase64 || storedDocuments.find(d => d.documentType === 'cover_letter')?.pdfBase64}
           isLoading={isCompiling.cover_letter}
           error={compileErrors.cover_letter || undefined}
           onCompile={() => handleCompile('cover_letter')}
@@ -250,10 +310,10 @@ export default function ReviewPage() {
       )}
 
       {/* Email Content */}
-      {emailContent && (
+      {emailContent || storedDocuments.some(d => d.documentType === 'email' && d.content) && (
         <DocumentCard
           title="Email Draft"
-          content={emailContent}
+          content={emailContent || storedDocuments.find(d => d.documentType === 'email')?.content}
         />
       )}
 

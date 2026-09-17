@@ -1,31 +1,48 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppState } from '@/hooks/useLocalStorage';
+import { useAppState } from '@/hooks/useIndexedDBStorage';
 import { useAI } from '@/hooks/useAI';
-import LoadingOverlay from '@/components/LoadingOverlay';
 import { JobAnalysis, AIProvider } from '@/types';
+import { saveDocument, isIndexedDBAvailable, StoredDocument } from '@/services/indexedDB';
+import LoadingOverlay from '@/components/LoadingOverlay';
 
 export default function AnalysisPage() {
   const navigate = useNavigate();
-  const { settings, profiles, getJobById } = useAppState();
+  const { settings, profiles, jobs } = useAppState();
   const { 
-    analysis, 
-    jobText, 
-    jobUrl,
+    analysis: aiAnalysis, 
+    jobUrl: aiJobUrl,
     isAnalyzing,
-    analysisError,
     generateCV,
     generateCoverLetter,
     generateEmail,
-    fullGenerate,
     compileDocument,
     isGenerating,
-    currentStep,
     cvLatex,
     coverLetterLatex,
     emailContent,
-    generationErrors,
   } = useAI();
+
+  // Use analysis from useAI if available, otherwise try to load from most recent job
+  const [analysis, setAnalysis] = useState<JobAnalysis | undefined>(aiAnalysis);
+  const [jobUrl, setJobUrl] = useState<string | undefined>(aiJobUrl);
+
+  // Load analysis from most recent job if useAI state is empty
+  useEffect(() => {
+    if (!aiAnalysis && jobs.length > 0) {
+      // Find the most recent job with analysis
+      const jobsWithAnalysis = jobs.filter(j => j.analysis);
+      if (jobsWithAnalysis.length > 0) {
+        const latestJob = jobsWithAnalysis[jobsWithAnalysis.length - 1];
+        setAnalysis(latestJob.analysis);
+        setJobUrl(latestJob.url);
+      }
+    } else if (aiAnalysis) {
+      // Use values from useAI if they exist
+      setAnalysis(aiAnalysis);
+      setJobUrl(aiJobUrl);
+    }
+  }, [aiAnalysis, aiJobUrl, jobs]);
 
   const [selectedProfile, setSelectedProfile] = useState<string>('');
   const [provider, setProvider] = useState<AIProvider>(settings.default_provider);
@@ -39,17 +56,24 @@ export default function AnalysisPage() {
     email: false,
   });
   const [isCompilingAll, setIsCompilingAll] = useState(false);
-  const [compiledPdfs, setCompiledPdfs] = useState({
+  const [compiledPdfs, setCompiledPdfs] = useState<{ cv: string | null; cover_letter: string | null }>({
     cv: null,
     cover_letter: null,
   });
-
+  
   // Load tone guide if exists
   useEffect(() => {
     // Try to load tone guide from data directory
     fetch('/data/tone.md')
       .then(res => res.text())
-      .catch(() => '');
+      .then(text => {
+        if (text) {
+          setToneGuide(text);
+        }
+      })
+      .catch(() => {
+        // Tone guide not available, will use empty string
+      });
   }, []);
 
   // Load API key from settings
@@ -72,12 +96,7 @@ export default function AnalysisPage() {
     setModel(settings.default_model || '');
   }, [settings.default_provider, settings.default_model]);
 
-  // No analysis - redirect to home
-  useEffect(() => {
-    if (!analysis && !isAnalyzing && !jobText) {
-      navigate('/');
-    }
-  }, [analysis, isAnalyzing, jobText, navigate]);
+  // No redirect - allow direct access to show helpful message
 
   // Get fit percentage and recommendation
   const fitPercentage = analysis?.fit_percentage || 0;
@@ -119,17 +138,23 @@ export default function AnalysisPage() {
     const profile = profiles.find(p => p.id === selectedProfile);
     if (!profile) return;
 
+    if (!model) return;
+
     setIsCompilingAll(true);
 
     try {
       // Generate documents
       const apiKeyToUse = apiKey || settings.api_keys?.[provider];
+      
+      // Get the current job ID to associate documents with
+      // For now, we use the most recent job from useAppState
+      const currentJobId = jobs.length > 0 ? jobs[jobs.length - 1].id : Date.now().toString();
 
       if (generateOptions.cv) {
         await generateCV(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model, babelLanguage, toneGuide }
         );
       }
 
@@ -137,7 +162,7 @@ export default function AnalysisPage() {
         await generateCoverLetter(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model, babelLanguage, toneGuide }
         );
       }
 
@@ -145,19 +170,63 @@ export default function AnalysisPage() {
         await generateEmail(
           analysis,
           profile.content,
-          { provider, apiKey: apiKeyToUse, model: model || undefined, babelLanguage, toneGuide }
+          { provider, apiKey: apiKeyToUse, model, babelLanguage, toneGuide }
         );
       }
 
-      // Compile PDFs if we have LaTeX
+      // Compile PDFs and save documents to IndexedDB
       if (cvLatex) {
         const cvPdf = await compileDocument(cvLatex);
-        if (cvPdf) setCompiledPdfs(prev => ({ ...prev, cv: cvPdf }));
+        if (cvPdf) {
+          setCompiledPdfs(prev => ({ ...prev, cv: cvPdf }));
+          
+          // Save CV to IndexedDB
+          if (isIndexedDBAvailable()) {
+            const doc: StoredDocument = {
+              id: `cv_${Date.now()}`,
+              jobId: currentJobId,
+              documentType: 'cv',
+              latex: cvLatex,
+              pdfBase64: cvPdf,
+              createdAt: new Date().toISOString(),
+            };
+            await saveDocument(doc).catch(e => console.error('Failed to save CV:', e));
+          }
+        }
       }
 
       if (coverLetterLatex) {
         const clPdf = await compileDocument(coverLetterLatex);
-        if (clPdf) setCompiledPdfs(prev => ({ ...prev, cover_letter: clPdf }));
+        if (clPdf) {
+          setCompiledPdfs(prev => ({ ...prev, cover_letter: clPdf }));
+          
+          // Save Cover Letter to IndexedDB
+          if (isIndexedDBAvailable()) {
+            const doc: StoredDocument = {
+              id: `cl_${Date.now()}`,
+              jobId: currentJobId,
+              documentType: 'cover_letter',
+              latex: coverLetterLatex,
+              pdfBase64: clPdf,
+              createdAt: new Date().toISOString(),
+            };
+            await saveDocument(doc).catch(e => console.error('Failed to save Cover Letter:', e));
+          }
+        }
+      }
+
+      // Save Email to IndexedDB if it exists
+      if (emailContent) {
+        if (isIndexedDBAvailable()) {
+          const doc: StoredDocument = {
+            id: `email_${Date.now()}`,
+            jobId: currentJobId,
+            documentType: 'email',
+            content: emailContent,
+            createdAt: new Date().toISOString(),
+          };
+          await saveDocument(doc).catch(e => console.error('Failed to save Email:', e));
+        }
       }
 
       // Navigate to review page after a short delay
@@ -177,6 +246,7 @@ export default function AnalysisPage() {
     apiKey,
     settings.api_keys,
     provider,
+    model,
     babelLanguage,
     toneGuide,
     generateOptions,
@@ -207,7 +277,14 @@ export default function AnalysisPage() {
   if (!analysis && !isAnalyzing) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">No analysis available. Please submit a job URL.</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">No Analysis Available</h2>
+        <p className="text-gray-600 mb-6">Submit a job URL on the home page to analyze a job posting.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Go to Home
+        </button>
       </div>
     );
   }
@@ -293,41 +370,41 @@ export default function AnalysisPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Information</h3>
           
-          {analysis.job_title && (
+          {analysis?.job_title && (
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-500">Title</span>
-                <span className="font-medium">{analysis.job_title}</span>
+                <span className="font-medium">{analysis?.job_title}</span>
               </div>
               <hr className="border-gray-200" />
             </div>
           )}
           
-          {analysis.company && (
+          {analysis?.company && (
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-500">Company</span>
-                <span className="font-medium">{analysis.company}</span>
+                <span className="font-medium">{analysis?.company}</span>
               </div>
               <hr className="border-gray-200" />
             </div>
           )}
           
-          {analysis.location && (
+          {analysis?.location && (
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-500">Location</span>
-                <span className="font-medium">{analysis.location}</span>
+                <span className="font-medium">{analysis?.location}</span>
               </div>
               <hr className="border-gray-200" />
             </div>
           )}
           
-          {analysis.language && (
+          {analysis?.language && (
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-500">Language</span>
-                <span className="font-medium">{analysis.language}</span>
+                <span className="font-medium">{analysis?.language}</span>
               </div>
             </div>
           )}
@@ -337,11 +414,11 @@ export default function AnalysisPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Requirements</h3>
           
-          {analysis.requirements && analysis.requirements.length > 0 && (
+          {analysis?.requirements && analysis?.requirements.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-gray-500">Required:</p>
               <ul className="space-y-2 ml-4">
-                {analysis.requirements.map((req, i) => (
+                {analysis?.requirements.map((req, i) => (
                   <li key={i} className="text-sm flex items-center">
                     <svg className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -353,11 +430,11 @@ export default function AnalysisPage() {
             </div>
           )}
           
-          {analysis.nice_to_haves && analysis.nice_to_haves.length > 0 && (
+          {analysis?.nice_to_haves && analysis?.nice_to_haves.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
               <p className="text-sm text-gray-500">Nice to have:</p>
               <ul className="space-y-2 ml-4">
-                {analysis.nice_to_haves.map((nice, i) => (
+                {analysis?.nice_to_haves.map((nice, i) => (
                   <li key={i} className="text-sm flex items-center">
                     <svg className="w-4 h-4 text-gray-300 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
@@ -369,11 +446,11 @@ export default function AnalysisPage() {
             </div>
           )}
           
-          {analysis.skills && analysis.skills.length > 0 && (
+          {analysis?.skills && analysis?.skills.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
               <p className="text-sm text-gray-500">Skills:</p>
               <div className="flex flex-wrap gap-2">
-                {analysis.skills.map((skill, i) => (
+                {analysis?.skills.map((skill, i) => (
                   <span key={i} className="px-2 py-1 bg-gray-100 rounded-full text-xs">
                     {skill}
                   </span>
@@ -451,7 +528,7 @@ export default function AnalysisPage() {
                 />
                 <p className="text-xs text-gray-500 text-center">or select from popular models:</p>
                 <div className="space-y-2">
-                  {(provider === 'mistral' || provider === 'mistral-small-2603') && (
+                  {provider === 'mistral' && (
                     <div>
                       <h4 className="text-xs font-medium text-gray-600 mb-1">Mistral Models</h4>
                       <div className="space-y-1">

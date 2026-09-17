@@ -9,7 +9,6 @@ import {
   JobAnalysisResponse,
   GenerateDocumentRequest,
   GenerateDocumentResponse,
-  DocumentType,
   AIProvider
 } from '@/types';
 

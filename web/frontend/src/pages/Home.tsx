@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import JobForm from '@/components/JobForm';
-import { useAppState } from '@/hooks/useLocalStorage';
+import { useAppState } from '@/hooks/useIndexedDBStorage';
 import { useAI } from '@/hooks/useAI';
-import { JobAnalysis, CandidateProfile } from '@/types';
 
 export default function HomePage() {
-  const { addJob, profiles, addProfile } = useAppState();
+  const { addJob, profiles, jobs } = useAppState();
   const { reset } = useAI();
   const [recentJobs, setRecentJobs] = useState<{ url: string; title?: string; date: string }[]>([]);
 
@@ -14,31 +13,25 @@ export default function HomePage() {
     reset();
   }, [reset]);
 
-  // Load recent jobs from storage
+  // Load recent jobs from useAppState
   useEffect(() => {
-    const jobs = localStorage.getItem('autocv_jobs');
-    if (jobs) {
-      try {
-        const parsed = JSON.parse(jobs);
-        const recent = parsed
-          .slice(-5)
-          .reverse()
-          .map((j: any) => ({
-            url: j.url,
-            title: j.analysis?.job_title || j.url,
-            date: new Date(j.created_at).toLocaleDateString(),
-          }));
-        setRecentJobs(recent);
-      } catch {
-        // Ignore parse errors
-      }
+    if (jobs.length > 0) {
+      const recent = jobs
+        .slice(-5)
+        .reverse()
+        .map((j: any) => ({
+          url: j.url,
+          title: j.analysis?.job_title || j.title || j.url,
+          date: new Date(j.created_at).toLocaleDateString(),
+        }));
+      setRecentJobs(recent);
     }
-  }, []);
+  }, [jobs]);
 
   // Check if we have a default profile
   const hasDefaultProfile = profiles.length > 0;
 
-  const handleSubmit = ({ url, profile }: { url: string; profile: string }) => {
+  const handleSubmit = ({ url }: { url: string; profile: string }) => {
     // Store the job
     addJob({
       url,

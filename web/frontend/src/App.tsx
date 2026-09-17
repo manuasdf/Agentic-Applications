@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAppState } from '@/hooks/useLocalStorage';
+import { useAppState, initializeStorage } from '@/hooks/useIndexedDBStorage';
 
 // Pages
 import HomePage from '@/pages/Home';
@@ -10,25 +10,25 @@ import SettingsPage from '@/pages/Settings';
 
 // Components
 import NavBar from '@/components/NavBar';
-import LoadingOverlay from '@/components/LoadingOverlay';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const { settings } = useAppState();
+  const { error } = useAppState();
 
-  // Initialize app
+  // Initialize storage (IndexedDB) and check backend
   useEffect(() => {
-    // Check if backend is available
-    const checkBackend = async () => {
+    async function initialize() {
       try {
+        // Initialize IndexedDB and migrate from localStorage
+        await initializeStorage();
+        
         // For now, just set loading to false
-        // In production, you might want to check backend health
         setTimeout(() => setIsLoading(false), 500);
       } catch {
         setIsLoading(false);
       }
-    };
-    checkBackend();
+    }
+    initialize();
   }, []);
 
   if (isLoading) {
@@ -37,6 +37,23 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading AutoCV...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's an error loading storage, show a message
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center text-red-600">
+          <p className="text-lg mb-4">Error loading app data: {error.message}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Reload
+          </button>
         </div>
       </div>
     );

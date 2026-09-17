@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useAppState } from '@/hooks/useLocalStorage';
+import { useAppState } from '@/hooks/useIndexedDBStorage';
 import { AIProvider, AppSettings } from '@/types';
-import { DEFAULT_SETTINGS, loadFromStorage, STORAGE_KEYS, saveToStorage } from '@/hooks/useLocalStorage';
+import { DEFAULT_SETTINGS } from '@/hooks/useIndexedDBStorage';
 
 export default function SettingsPage() {
-  const { settings, updateSettings, profiles, deleteProfile } = useAppState();
+  const { settings, updateSettings, profiles, deleteProfile, jobs, generations } = useAppState();
   
   const [formSettings, setFormSettings] = useState<AppSettings>({ ...settings });
   const [showApiKey, setShowApiKey] = useState<Record<AIProvider, boolean>>({} as Record<AIProvider, boolean>);
@@ -507,9 +507,9 @@ export default function SettingsPage() {
         
         <div className="space-y-4 max-w-2xl">
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="font-medium text-gray-900 mb-2">Local Storage Usage</h3>
+            <h3 className="font-medium text-gray-900 mb-2">Storage Usage</h3>
             <p className="text-sm text-gray-600 mb-3">
-              All your data (profiles, jobs, settings) is stored locally in your browser's localStorage.
+              All your data (profiles, jobs, settings) is stored locally in your browser using IndexedDB.
             </p>
             
             <div className="space-y-2 text-sm">
@@ -517,29 +517,22 @@ export default function SettingsPage() {
                 <span className="text-gray-500">Profiles:</span>
                 <span>{profiles.length} saved</span>
               </div>
-              {(() => {
-                const jobs = loadFromStorage(STORAGE_KEYS.JOBS, []);
-                const generations = loadFromStorage(STORAGE_KEYS.GENERATIONS, []);
-                return (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Jobs:</span>
-                      <span>{jobs.length} saved</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Generations:</span>
-                      <span>{generations.length} saved</span>
-                    </div>
-                  </>
-                );
-              })()}
+              <div className="flex justify-between">
+                <span className="text-gray-500">Jobs:</span>
+                <span>{jobs.length} saved</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Generations:</span>
+                <span>{generations.length} saved</span>
+              </div>
             </div>
 
             <div className="flex space-x-3 mt-4">
               <button
                 onClick={() => {
-                  if (confirm('Are you sure you want to clear ALL localStorage data? This cannot be undone.')) {
+                  if (confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
                     localStorage.clear();
+                    window.indexedDB?.deleteDatabase?.('AutoCVDB');
                     window.location.reload();
                   }
                 }}
@@ -550,10 +543,10 @@ export default function SettingsPage() {
               <button
                 onClick={() => {
                   const data = {
-                    settings: loadFromStorage(STORAGE_KEYS.SETTINGS, {}),
-                    profiles: loadFromStorage(STORAGE_KEYS.PROFILES, []),
-                    jobs: loadFromStorage(STORAGE_KEYS.JOBS, []),
-                    generations: loadFromStorage(STORAGE_KEYS.GENERATIONS, []),
+                    settings,
+                    profiles,
+                    jobs,
+                    generations,
                   };
                   
                   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

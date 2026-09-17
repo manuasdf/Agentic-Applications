@@ -3,9 +3,8 @@ import {
   AIProvider, 
   JobAnalysis, 
   JobAnalysisResponse,
-  FullGenerationRequest,
-  FullGenerationResult
 } from '@/types';
+import { FullGenerationRequest, FullGenerationResult } from '@/services/api';
 import { 
   scrapeJobPosting,
   analyzeJobPosting,
@@ -96,13 +95,7 @@ export function useAI(): UseAIResult {
     });
   }, []);
 
-  const updateStep = useCallback((step: GenerationStep, progress?: number) => {
-    setState(prev => ({
-      ...prev,
-      currentStep: step,
-      progress: progress ?? prev.progress,
-    }));
-  }, []);
+
 
   // Scrape a job posting URL
   const scrape = useCallback(async (url: string) => {
@@ -163,7 +156,7 @@ export function useAI(): UseAIResult {
   }, []);
 
   // Generate CV
-  const generateCV = useCallback(async (
+  const handleGenerateCV = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
     options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }
@@ -196,7 +189,7 @@ export function useAI(): UseAIResult {
   }, []);
 
   // Generate Cover Letter
-  const generateCoverLetter = useCallback(async (
+  const handleGenerateCoverLetter = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
     options?: { provider?: AIProvider; apiKey?: string; model?: string; template?: string; babelLanguage?: string; toneGuide?: string }
@@ -229,7 +222,7 @@ export function useAI(): UseAIResult {
   }, []);
 
   // Generate Email
-  const generateEmail = useCallback(async (
+  const handleGenerateEmail = useCallback(async (
     analysis: JobAnalysis,
     profile: string,
     options?: { provider?: AIProvider; apiKey?: string; model?: string; babelLanguage?: string; toneGuide?: string }
@@ -293,7 +286,7 @@ export function useAI(): UseAIResult {
   }, []);
 
   // Full generation pipeline
-  const fullGenerate = useCallback(async (request: FullGenerationRequest): Promise<FullGenerationResult> => {
+  const handleFullGenerate = useCallback(async (request: FullGenerationRequest): Promise<FullGenerationResult> => {
     setState(prev => ({
       ...prev,
       isGenerating: true,
@@ -354,11 +347,11 @@ export function useAI(): UseAIResult {
     // Actions
     scrape,
     analyze,
-    generateCV,
-    generateCoverLetter,
-    generateEmail,
+    generateCV: handleGenerateCV,
+    generateCoverLetter: handleGenerateCoverLetter,
+    generateEmail: handleGenerateEmail,
     compileDocument,
-    fullGenerate,
+    fullGenerate: handleFullGenerate,
     checkHealth,
     reset,
   };
