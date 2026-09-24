@@ -7,7 +7,3 @@ __pycache__/
 .gemini/
 output/
 config.json
-web/frontend/node_modules
-web/frontend/dist
-web/frontend/package-lock.json
-web/backend/__pycache__
